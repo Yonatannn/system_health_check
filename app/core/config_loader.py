@@ -67,10 +67,6 @@ class AppSettings:
         return bool(self.get("features", "enable_smb_sync", default=True))
 
     @property
-    def enable_network_apply(self) -> bool:
-        return bool(self.get("features", "enable_network_apply", default=True))
-
-    @property
     def temporarily_switch_to_dhcp(self) -> bool:
         return bool(self.get("sync", "temporarily_switch_interface_to_dhcp", default=True))
 

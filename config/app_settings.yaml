@@ -14,8 +14,6 @@ features:
   enable_backups: true
   enable_gitlab_sync: true
   enable_smb_sync: true
-  enable_network_device_checks: false
-  enable_network_apply: true
 
 sync:
   server_ip: "192.168.1.1"

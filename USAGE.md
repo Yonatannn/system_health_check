@@ -55,8 +55,8 @@ This is the primary use case. No network connection is required.
 
 **What is checked by default (Plane - Field profile):**
 
-- **Main PC Interface** — adapter named `Ethernet` exists, is up, has IP `192.168.10.100/24`
-- **USB Network Adapter** — adapter named `Ethernet 2` exists, is up, has IP `192.168.20.100/24`
+- **Main PC Interface** — adapter named `Ethernet` exists, is up, has IP `192.168.0.100/24`
+- **USB Network Adapter** — adapter named `Ethernet 2` exists, is up, has IP `192.168.1.100/24`
 - **Joystick XML** — `%USERPROFILE%\Documents\Mission Planner\joystick.xml` exists, is valid XML, SHA256 matches bundle baseline
 - **Mission Planner Config** — same checks for `config.xml`
 - **Camera Configuration** — optional; checked if the file and baseline both exist
@@ -302,8 +302,6 @@ features:
   enable_backups: true             # Create backups before Apply Profile.
   enable_gitlab_sync: true         # Include git repos in Sync Now.
   enable_smb_sync: true            # Include SMB shares in Sync Now.
-  enable_network_device_checks: false   # Future feature; not implemented yet.
-  enable_network_apply: true       # Reserved.
 
 sync:
   server_ip: "192.168.1.1"
@@ -401,7 +399,7 @@ Every result row shows:
 **Example FAIL output for an interface:**
 ```
 [FAIL] USB Network Adapter — IPv4 Mismatch
-  Expected: 192.168.20.100/24
+  Expected: 192.168.1.100/24
   Actual:   169.254.12.33/16
 ```
 This means the adapter was found and is up, but Windows assigned an APIPA address instead of the configured static IP. Fix: open Windows network settings and set the static IP manually, or Apply Profile if the profile includes a network apply action.

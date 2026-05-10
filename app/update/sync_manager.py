@@ -53,18 +53,18 @@ class SyncManager:
         iface_match = self.settings.sync_interface_match
         if not iface_match:
             report.messages.append("No sync interface configured — skipping DHCP switch.")
-            return self._run_sync_operations(report, skip_dhcp=True)
+            return self._run_sync_operations(report)
 
         adapter = find_adapter_by_match(iface_match)
         if adapter is None:
             report.messages.append("Sync interface not found — skipping DHCP switch.")
-            return self._run_sync_operations(report, skip_dhcp=True)
+            return self._run_sync_operations(report)
 
         iface_name = adapter.name
         self.log(f"Sync interface: {iface_name}")
 
         if not self.settings.temporarily_switch_to_dhcp:
-            return self._run_sync_operations(report, skip_dhcp=True)
+            return self._run_sync_operations(report)
 
         ctx = DHCPContext(
             iface_name=iface_name,
@@ -75,7 +75,7 @@ class SyncManager:
             with ctx.managed():
                 if not self._check_server_reachable(report):
                     return report
-                self._run_sync_operations(report, skip_dhcp=False)
+                self._run_sync_operations(report)
         except DHCPSwitchError as e:
             report.error = str(e)
             report.interface_restored = False
@@ -98,10 +98,7 @@ class SyncManager:
         self.log(f"Server {server} is reachable.")
         return True
 
-    def _run_sync_operations(self, report: SyncReport, skip_dhcp: bool = False) -> SyncReport:
-        if not skip_dhcp:
-            pass  # Already inside DHCP context
-
+    def _run_sync_operations(self, report: SyncReport) -> SyncReport:
         gitlab_commits: dict[str, Optional[str]] = {}
 
         # GitLab sync
