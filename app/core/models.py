@@ -110,8 +110,6 @@ class FileCheckSpec:
     check_exists: bool = True
     check_valid_xml: bool = False
     check_sha256: bool = True
-    apply_enabled: bool = True
-    backup_before_replace: bool = True
 
 
 @dataclass

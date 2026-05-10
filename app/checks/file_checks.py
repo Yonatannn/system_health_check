@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 
 from app.core.models import FileCheckSpec, CheckResult
-from app.core.result import make_pass, make_fail, make_skipped, make_warning
+from app.core.result import make_pass, make_fail, make_skipped
 from app.checks.xml_validation import is_valid_xml
 
 
@@ -18,32 +18,33 @@ def sha256_file(path: Path) -> str:
 
 def check_file_spec(
     spec: FileCheckSpec,
-    bundle_dir: Path,
+    sha256_manifest: dict[str, str],
     category: str,
     base_path: str = "",
 ) -> list[CheckResult]:
-    """Check a single file spec: baseline present, target exists, XML valid, SHA256 match."""
+    """Check a single file spec against the SHA256 manifest."""
     results = []
     target = (
         Path(os.path.expandvars(base_path)) / spec.target_path
         if base_path
         else Path(os.path.expandvars(spec.target_path))
     )
-    expected = bundle_dir / spec.expected_file
 
-    if not expected.exists():
+    expected_hash = sha256_manifest.get(spec.expected_file)
+
+    if expected_hash is None:
         if spec.required:
             results.append(make_fail(
                 id=f"{spec.id}_baseline",
                 category=category,
-                title=f"{spec.display_name} — Baseline Missing",
-                details="Expected baseline not found in bundle.",
+                title=f"{spec.display_name} — Not in Bundle",
+                details="No SHA256 checksum found in bundle manifest. Run a sync to update the bundle.",
             ))
         else:
             results.append(make_skipped(
                 id=f"{spec.id}_baseline",
                 category=category,
-                title=f"{spec.display_name} — Baseline Not Configured",
+                title=f"{spec.display_name} — Not Configured",
             ))
         return results
 
@@ -78,17 +79,9 @@ def check_file_spec(
                 title=f"{spec.display_name} — XML Invalid",
                 details=err, blocking=spec.required,
             ))
-        ok_exp, err_exp = is_valid_xml(expected)
-        if not ok_exp:
-            results.append(make_warning(
-                id=f"{spec.id}_baseline_xml", category=category,
-                title=f"{spec.display_name} — Baseline XML Invalid",
-                details=f"Baseline in bundle is not valid XML: {err_exp}",
-            ))
 
     if spec.check_sha256:
         actual_hash = sha256_file(target)
-        expected_hash = sha256_file(expected)
         if actual_hash == expected_hash:
             results.append(make_pass(
                 id=f"{spec.id}_sha256", category=category,

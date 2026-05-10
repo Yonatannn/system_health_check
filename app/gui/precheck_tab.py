@@ -17,7 +17,7 @@ from app.core.result import group_by_category, calculate_overall_status
 from app.checks.windows_interfaces import run_interface_checks
 from app.checks.mission_planner_files import run_mission_planner_checks
 from app.checks.external_files import run_external_file_checks
-from app.actions.apply_profile import apply_profile, preview_apply
+from app.update.checksum_manifest import load_checksum_manifest
 from app.gui.widgets import status_badge, overall_status_label, section_header, horizontal_line
 
 
@@ -32,10 +32,11 @@ class PrecheckWorker(QThread):
 
     def run(self):
         try:
+            sha256_manifest = load_checksum_manifest(self.bundle_dir)
             results = []
             results.extend(run_interface_checks(self.profile))
-            results.extend(run_mission_planner_checks(self.profile, self.bundle_dir))
-            results.extend(run_external_file_checks(self.profile, self.bundle_dir))
+            results.extend(run_mission_planner_checks(self.profile, sha256_manifest))
+            results.extend(run_external_file_checks(self.profile, sha256_manifest))
             self.finished.emit(results)
         except Exception as e:
             self.error.emit(str(e))
@@ -93,7 +94,6 @@ class PrecheckTab(QWidget):
         main.setSpacing(8)
         main.setContentsMargins(12, 12, 12, 12)
 
-        # Header info
         info_layout = QHBoxLayout()
         self._bundle_label = QLabel("Bundle: —")
         self._bundle_label.setStyleSheet("color: #555;")
@@ -102,7 +102,6 @@ class PrecheckTab(QWidget):
         main.addLayout(info_layout)
         main.addWidget(horizontal_line())
 
-        # Profile selection row
         profile_row = QHBoxLayout()
         profile_row.addWidget(QLabel("Profile:"))
         self._profile_combo = QComboBox()
@@ -119,20 +118,9 @@ class PrecheckTab(QWidget):
                                        "QPushButton:hover { background-color: #1976d2; }"
                                        "QPushButton:disabled { background-color: #bdbdbd; }")
         profile_row.addWidget(self._check_btn)
-
-        self._apply_btn = QPushButton("Apply Profile")
-        self._apply_btn.setFixedWidth(130)
-        self._apply_btn.setEnabled(False)
-        self._apply_btn.clicked.connect(self._apply_profile)
-        self._apply_btn.setStyleSheet("QPushButton { background-color: #2e7d32; color: white; "
-                                       "padding: 6px; border-radius: 4px; font-weight: bold; }"
-                                       "QPushButton:hover { background-color: #388e3c; }"
-                                       "QPushButton:disabled { background-color: #bdbdbd; }")
-        profile_row.addWidget(self._apply_btn)
         main.addLayout(profile_row)
         main.addWidget(horizontal_line())
 
-        # Overall status
         status_row = QHBoxLayout()
         status_row.addWidget(QLabel("Overall Status:"))
         self._status_label = QLabel("—")
@@ -141,7 +129,6 @@ class PrecheckTab(QWidget):
         status_row.addStretch()
         main.addLayout(status_row)
 
-        # Results scroll area
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
@@ -173,7 +160,6 @@ class PrecheckTab(QWidget):
 
     def _on_profile_changed(self, _):
         self._clear_results()
-        self._apply_btn.setEnabled(False)
 
     def _current_profile(self) -> Optional[Profile]:
         idx = self._profile_combo.currentIndex()
@@ -186,7 +172,6 @@ class PrecheckTab(QWidget):
         if not profile:
             return
         self._check_btn.setEnabled(False)
-        self._apply_btn.setEnabled(False)
         self._clear_results()
         self._status_label.setText("Running…")
 
@@ -198,7 +183,6 @@ class PrecheckTab(QWidget):
     def _on_check_done(self, results: list[CheckResult]):
         self.current_results = results
         self._check_btn.setEnabled(True)
-        self._apply_btn.setEnabled(self.settings.enable_apply_profile and len(results) > 0)
         self._render_results(results)
 
     def _on_check_error(self, msg: str):
@@ -233,7 +217,6 @@ class PrecheckTab(QWidget):
 
         categories = group_by_category(results)
         layout = self._results_layout
-        # Remove stretch
         item = layout.takeAt(layout.count() - 1)
 
         for cat in categories:
@@ -251,41 +234,6 @@ class PrecheckTab(QWidget):
                 item.widget().deleteLater()
         self._status_label.setText("—")
         self._status_label.setStyleSheet("font-size: 14px; font-weight: bold; padding: 4px 12px;")
-
-    def _apply_profile(self):
-        profile = self._current_profile()
-        if not profile:
-            return
-
-        preview = preview_apply(profile, self.paths.config_bundle_dir)
-        if not preview:
-            QMessageBox.information(self, "Apply Profile", "No files to apply for this profile.")
-            return
-
-        file_list = "\n".join(f"  • {item.display_name}: {item.dst}" for item in preview)
-        reply = QMessageBox.question(
-            self, "Apply Profile",
-            f"The following files will be replaced:\n\n{file_list}\n\n"
-            f"{'Backups will be created before replacement.' if self.settings.enable_backups else 'No backups configured.'}\n\n"
-            f"Proceed?",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
-        )
-        if reply != QMessageBox.Yes:
-            return
-
-        result = apply_profile(profile, self.paths.config_bundle_dir, self.paths.backup_dir)
-        if result.success:
-            msg = "Profile applied successfully.\n\nApplied:\n" + "\n".join(f"  • {f}" for f in result.applied)
-            if result.backup_dir:
-                msg += f"\n\nBackup saved to: {result.backup_dir}"
-            QMessageBox.information(self, "Apply Profile", msg)
-        else:
-            msg = "Apply completed with errors.\n"
-            if result.applied:
-                msg += "\nApplied:\n" + "\n".join(f"  • {f}" for f in result.applied)
-            if result.errors:
-                msg += "\n\nErrors:\n" + "\n".join(f"  • {e}" for e in result.errors)
-            QMessageBox.warning(self, "Apply Profile", msg)
 
     def refresh(self):
         self._load_profiles()

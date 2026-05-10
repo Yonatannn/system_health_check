@@ -7,11 +7,8 @@ paths:
   config_bundle_dir: "./data/config_bundle"
   sources_dir: "./data/sources"
   mission_planner_dir: "%USERPROFILE%/Documents/Mission Planner"
-  backup_dir: "./backups"
 
 features:
-  enable_apply_profile: true
-  enable_backups: true
   enable_gitlab_sync: true
   enable_smb_sync: true
 

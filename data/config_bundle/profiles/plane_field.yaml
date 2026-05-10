@@ -35,9 +35,6 @@ mission_planner:
         exists: true
         valid_xml: true
         sha256_match: true
-      apply:
-        enabled: true
-        backup_before_replace: true
 
     - id: "planner_config"
       display_name: "Mission Planner Config"
@@ -49,9 +46,6 @@ mission_planner:
         exists: true
         valid_xml: true
         sha256_match: true
-      apply:
-        enabled: true
-        backup_before_replace: true
 
 external_files:
   - id: "camera_config"
@@ -62,6 +56,3 @@ external_files:
     checks:
       exists: true
       sha256_match: true
-    apply:
-      enabled: true
-      backup_before_replace: true
