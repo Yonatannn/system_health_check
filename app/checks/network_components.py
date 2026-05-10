@@ -4,7 +4,7 @@ from typing import Optional
 
 from app.core.config_loader import AppSettings
 from app.core.models import CheckResult
-from app.core.result import make_pass, make_fail
+from app.core.result import make_pass, make_fail, make_skipped
 from app.windows.powershell import ping_host
 
 CATEGORY = "Network Components"
@@ -50,6 +50,20 @@ def _ping_spec(spec: ComponentPingSpec, source_ip: Optional[str], timeout: int) 
         actual="no response",
         blocking=spec.required,
     )
+
+
+def make_skipped_ping_checks(settings: AppSettings) -> list[CheckResult]:
+    """Return SKIPPED results for all components — used when interfaces are misconfigured."""
+    specs = _load_specs(settings)
+    return [
+        make_skipped(
+            id=f"component_ping_{spec.name.lower().replace(' ', '_')}",
+            category=CATEGORY,
+            title=f"{spec.name} — Skipped",
+            details="Skipped: network interface IP is not configured correctly.",
+        )
+        for spec in specs
+    ]
 
 
 def run_component_ping_checks(settings: AppSettings) -> list[CheckResult]:

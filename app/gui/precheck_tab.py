@@ -17,6 +17,7 @@ from app.core.result import group_by_category, calculate_overall_status
 from app.checks.windows_interfaces import run_interface_checks
 from app.checks.mission_planner_files import run_mission_planner_checks
 from app.checks.external_files import run_external_file_checks
+from app.checks.network_components import run_component_ping_checks, make_skipped_ping_checks
 from app.update.checksum_manifest import load_checksum_manifest
 from app.gui.widgets import status_badge, overall_status_label, section_header, horizontal_line
 
@@ -25,16 +26,28 @@ class PrecheckWorker(QThread):
     finished = pyqtSignal(list)
     error = pyqtSignal(str)
 
-    def __init__(self, profile: Profile, bundle_dir: Path):
+    def __init__(self, profile: Profile, bundle_dir: Path, settings: AppSettings):
         super().__init__()
         self.profile = profile
         self.bundle_dir = bundle_dir
+        self.settings = settings
 
     def run(self):
         try:
             sha256_manifest = load_checksum_manifest(self.bundle_dir)
             results = []
-            results.extend(run_interface_checks(self.profile))
+
+            interface_results = run_interface_checks(self.profile)
+            results.extend(interface_results)
+
+            interfaces_ok = not any(
+                r.status == CheckStatus.FAIL and r.blocking for r in interface_results
+            )
+            if interfaces_ok:
+                results.extend(run_component_ping_checks(self.settings))
+            else:
+                results.extend(make_skipped_ping_checks(self.settings))
+
             results.extend(run_mission_planner_checks(self.profile, sha256_manifest))
             results.extend(run_external_file_checks(self.profile, sha256_manifest))
             self.finished.emit(results)
@@ -175,7 +188,7 @@ class PrecheckTab(QWidget):
         self._clear_results()
         self._status_label.setText("Running…")
 
-        self._worker = PrecheckWorker(profile, self.paths.config_bundle_dir)
+        self._worker = PrecheckWorker(profile, self.paths.config_bundle_dir, self.settings)
         self._worker.finished.connect(self._on_check_done)
         self._worker.error.connect(self._on_check_error)
         self._worker.start()
