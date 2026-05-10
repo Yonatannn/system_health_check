@@ -41,10 +41,6 @@ class AppPaths:
         return self.sources_dir / "smb"
 
     @property
-    def backup_dir(self) -> Path:
-        return self.root / "backups"
-
-    @property
     def embedded_bundle_dir(self) -> Path:
         return self.root / "embedded_default_bundle"
 
@@ -55,6 +51,5 @@ class AppPaths:
 
     def ensure_dirs(self):
         for d in [self.config_dir, self.data_dir, self.config_bundle_dir,
-                  self.sources_dir, self.gitlab_sources_dir, self.smb_sources_dir,
-                  self.backup_dir]:
+                  self.sources_dir, self.gitlab_sources_dir, self.smb_sources_dir]:
             d.mkdir(parents=True, exist_ok=True)

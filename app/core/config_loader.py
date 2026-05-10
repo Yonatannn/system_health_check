@@ -43,20 +43,8 @@ class AppSettings:
         return self.get("paths", "mission_planner_dir")
 
     @property
-    def backup_dir(self) -> Optional[str]:
-        return self.get("paths", "backup_dir")
-
-    @property
     def git_executable(self) -> str:
         return self.get("tools", "git_executable", default="git")
-
-    @property
-    def enable_apply_profile(self) -> bool:
-        return bool(self.get("features", "enable_apply_profile", default=True))
-
-    @property
-    def enable_backups(self) -> bool:
-        return bool(self.get("features", "enable_backups", default=True))
 
     @property
     def enable_gitlab_sync(self) -> bool:

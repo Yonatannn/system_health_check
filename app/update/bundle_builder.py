@@ -6,8 +6,10 @@ from pathlib import Path
 from typing import Optional, Callable
 import yaml
 
-from app.update.checksum_manifest import write_checksum_manifest
+from app.update.checksum_manifest import sha256_file, write_checksum_manifest
 from app.core.bundle import validate_bundle
+
+TRACKED_SUBDIRS = ("mission_planner", "external_configs")
 
 
 class BundleBuildError(Exception):
@@ -20,6 +22,45 @@ def _copy_tree(src: Path, dst: Path):
     shutil.copytree(str(src), str(dst))
 
 
+def _compute_source_checksums(
+    sources_gitlab_dir: Path,
+    sources_smb_dir: Path,
+    settings_sources: dict,
+    log: Callable[[str], None],
+) -> dict[str, str]:
+    checksums: dict[str, str] = {}
+
+    for repo in settings_sources.get("gitlab", {}).get("repositories", []):
+        name = repo.get("name", "")
+        local_path = Path(repo.get("local_path", str(sources_gitlab_dir / name)))
+        if not local_path.exists():
+            continue
+        log(f"Hashing files from GitLab source: {name}…")
+        for sub in TRACKED_SUBDIRS:
+            src_sub = local_path / sub
+            if src_sub.exists():
+                for file_path in sorted(src_sub.rglob("*")):
+                    if file_path.is_file():
+                        rel = file_path.relative_to(local_path).as_posix()
+                        checksums[rel] = sha256_file(file_path)
+
+    for share in settings_sources.get("smb", {}).get("shares", []):
+        name = share.get("name", "")
+        local_path = Path(share.get("local_path", str(sources_smb_dir / name)))
+        if not local_path.exists():
+            continue
+        log(f"Hashing files from SMB source: {name}…")
+        for sub in TRACKED_SUBDIRS:
+            src_sub = local_path / sub
+            if src_sub.exists():
+                for file_path in sorted(src_sub.rglob("*")):
+                    if file_path.is_file():
+                        rel = file_path.relative_to(local_path).as_posix()
+                        checksums[rel] = sha256_file(file_path)
+
+    return checksums
+
+
 def build_bundle(
     sources_gitlab_dir: Path,
     sources_smb_dir: Path,
@@ -30,7 +71,8 @@ def build_bundle(
     log: Optional[Callable[[str], None]] = None,
 ) -> Path:
     """
-    Build a normalized config bundle from synced sources.
+    Build a config bundle from synced sources.
+    Stores only SHA256 checksums — no config files are copied into the bundle.
     Works atomically: writes to a temp dir, validates, then replaces output_bundle_dir.
     """
     log = log or (lambda msg: None)
@@ -46,51 +88,22 @@ def build_bundle(
         else:
             (tmp_path / "profiles").mkdir()
 
-        # Copy mission_planner configs from GitLab source if available
-        for repo in settings_sources.get("gitlab", {}).get("repositories", []):
-            name = repo.get("name", "")
-            local_path = Path(repo.get("local_path", str(sources_gitlab_dir / name)))
-            if local_path.exists():
-                log(f"Integrating GitLab source: {name}…")
-                # Copy any known sub-directories into the bundle
-                for sub in ["mission_planner", "external_configs", "profiles"]:
-                    src_sub = local_path / sub
-                    if src_sub.exists():
-                        dst_sub = tmp_path / sub
-                        if dst_sub.exists():
-                            shutil.rmtree(str(dst_sub))
-                        shutil.copytree(str(src_sub), str(dst_sub))
+        log("Computing checksums from sources…")
+        checksums = _compute_source_checksums(
+            sources_gitlab_dir, sources_smb_dir, settings_sources, log
+        )
 
-        # Copy SMB sources
-        for share in settings_sources.get("smb", {}).get("shares", []):
-            name = share.get("name", "")
-            local_path = Path(share.get("local_path", str(sources_smb_dir / name)))
-            if local_path.exists():
-                log(f"Integrating SMB source: {name}…")
-                for item in local_path.iterdir():
-                    dst_item = tmp_path / item.name
-                    if item.is_dir():
-                        if dst_item.exists():
-                            shutil.rmtree(str(dst_item))
-                        shutil.copytree(str(item), str(dst_item))
-                    else:
-                        shutil.copy2(str(item), str(dst_item))
-
-        # Generate bundle manifest
         log("Generating bundle manifest…")
         _write_manifest(tmp_path, settings_sources, gitlab_commits)
 
-        # Generate checksum manifest
-        log("Generating checksum manifest…")
-        write_checksum_manifest(tmp_path)
+        log("Writing checksum manifest…")
+        write_checksum_manifest(tmp_path, checksums)
 
-        # Validate before replacing active bundle
         log("Validating bundle…")
         ok, err = validate_bundle(tmp_path)
         if not ok:
             raise BundleBuildError(f"Bundle validation failed: {err}")
 
-        # Atomic replace: rename existing to .old, move new in
         log("Replacing active bundle…")
         old_bundle = output_bundle_dir.parent / (output_bundle_dir.name + ".old")
         if old_bundle.exists():

@@ -59,14 +59,6 @@ class SettingsTab(QWidget):
         feat_group = QGroupBox("Features")
         feat_layout = QVBoxLayout(feat_group)
 
-        self._chk_apply = QCheckBox("Enable Apply Profile")
-        self._chk_apply.setChecked(self.settings.enable_apply_profile)
-        feat_layout.addWidget(self._chk_apply)
-
-        self._chk_backups = QCheckBox("Enable Backups Before Apply")
-        self._chk_backups.setChecked(self.settings.enable_backups)
-        feat_layout.addWidget(self._chk_backups)
-
         self._chk_gitlab = QCheckBox("Enable GitLab Sync")
         self._chk_gitlab.setChecked(self.settings.enable_gitlab_sync)
         feat_layout.addWidget(self._chk_gitlab)
@@ -114,8 +106,6 @@ class SettingsTab(QWidget):
         data.setdefault("tools", {})["git_executable"] = self._git_exe.text()
         data.setdefault("sync", {})["server_ip"] = self._server_ip.text()
         data.setdefault("network", {}).setdefault("sync_interface", {}).setdefault("match_by", {})["adapter_name"] = self._sync_iface.text()
-        data.setdefault("features", {})["enable_apply_profile"] = self._chk_apply.isChecked()
-        data.setdefault("features", {})["enable_backups"] = self._chk_backups.isChecked()
         data.setdefault("features", {})["enable_gitlab_sync"] = self._chk_gitlab.isChecked()
         data.setdefault("features", {})["enable_smb_sync"] = self._chk_smb.isChecked()
         data.setdefault("sync", {})["temporarily_switch_interface_to_dhcp"] = self._chk_dhcp.isChecked()

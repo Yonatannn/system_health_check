@@ -34,7 +34,6 @@ def _load_interface(d: dict) -> InterfaceSpec:
 
 def _load_file_spec(d: dict, file_type: str = "generic") -> FileCheckSpec:
     checks = d.get("checks", {})
-    apply_cfg = d.get("apply", {})
     t = d.get("type", file_type)
     return FileCheckSpec(
         id=d["id"],
@@ -46,8 +45,6 @@ def _load_file_spec(d: dict, file_type: str = "generic") -> FileCheckSpec:
         check_exists=checks.get("exists", True),
         check_valid_xml=checks.get("valid_xml", t == "xml"),
         check_sha256=checks.get("sha256_match", True),
-        apply_enabled=apply_cfg.get("enabled", True),
-        backup_before_replace=apply_cfg.get("backup_before_replace", True),
     )
 
 
