@@ -1,0 +1,30 @@
+bundle:
+  name: "Ground Station Config Bundle"
+  version: "2026.05.10-001"
+  created_at: "2026-05-10T14:30:00"
+  schema_version: "1.0"
+
+sources:
+  gitlab:
+    - name: "mission-configs"
+      url: "http://192.168.1.1/group/mission-configs.git"
+      branch: "main"
+      commit: "UNKNOWN_UNTIL_SYNCED"
+
+    - name: "network-configs"
+      url: "http://192.168.1.1/group/network-configs.git"
+      branch: "main"
+      commit: "UNKNOWN_UNTIL_SYNCED"
+
+  smb:
+    - name: "ground-station-configs"
+      source_path: "\\\\192.168.1.1\\GroundStationConfigs"
+
+profiles:
+  - id: "plane_field"
+    display_name: "Plane - Field"
+    file: "profiles/plane_field.yaml"
+
+  - id: "copter_field"
+    display_name: "Copter - Field"
+    file: "profiles/copter_field.yaml"

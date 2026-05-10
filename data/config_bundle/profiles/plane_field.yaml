@@ -1,0 +1,67 @@
+profile:
+  id: "plane_field"
+  display_name: "Plane - Field"
+  description: "Plane field configuration for the ground station."
+
+windows_interfaces:
+  - id: "main_pc_interface"
+    display_name: "Main PC Interface"
+    required: true
+    match_by:
+      adapter_name: "Ethernet"
+    expected_ipv4:
+      address: "192.168.10.100"
+      prefix_length: 24
+
+  - id: "usb_network_adapter"
+    display_name: "USB Network Adapter"
+    required: true
+    match_by:
+      adapter_name: "Ethernet 2"
+    expected_ipv4:
+      address: "192.168.20.100"
+      prefix_length: 24
+
+mission_planner:
+  base_path: "%USERPROFILE%/Documents/Mission Planner"
+  files:
+    - id: "joystick"
+      display_name: "Joystick XML"
+      target_path: "joystick.xml"
+      expected_file: "mission_planner/plane_field/joystick.xml"
+      required: true
+      type: "xml"
+      checks:
+        exists: true
+        valid_xml: true
+        sha256_match: true
+      apply:
+        enabled: true
+        backup_before_replace: true
+
+    - id: "planner_config"
+      display_name: "Mission Planner Config"
+      target_path: "config.xml"
+      expected_file: "mission_planner/plane_field/config.xml"
+      required: true
+      type: "xml"
+      checks:
+        exists: true
+        valid_xml: true
+        sha256_match: true
+      apply:
+        enabled: true
+        backup_before_replace: true
+
+external_files:
+  - id: "camera_config"
+    display_name: "Camera Configuration"
+    target_path: "C:/Arc/Camera/config.json"
+    expected_file: "external_configs/camera/plane_field/config.json"
+    required: false
+    checks:
+      exists: true
+      sha256_match: true
+    apply:
+      enabled: true
+      backup_before_replace: true
