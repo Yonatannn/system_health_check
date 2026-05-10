@@ -57,25 +57,25 @@ network:
 network_components:
   ping_timeout_seconds: 5
   subnet_source_ips:
-    0: "192.168.10.100"
-    1: "192.168.20.100"
+    0: "192.168.0.100"   # Main PC Interface (Ethernet)
+    1: "192.168.1.100"   # USB Network Adapter (Ethernet 2)
   components:
     - name: "Autopilot"
-      ip: "192.168.10.1"
+      ip: "192.168.0.1"
       subnet: 0
       required: true
 
     - name: "GCS Video Receiver"
-      ip: "192.168.10.50"
+      ip: "192.168.0.50"
       subnet: 0
       required: false
 
     - name: "Payload Computer"
-      ip: "192.168.20.1"
+      ip: "192.168.1.1"
       subnet: 1
       required: true
 
     - name: "Camera Control Unit"
-      ip: "192.168.20.10"
+      ip: "192.168.1.10"
       subnet: 1
       required: false
