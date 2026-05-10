@@ -23,9 +23,9 @@ def list_adapters() -> list[AdapterInfo]:
     if not IS_WINDOWS:
         return [
             AdapterInfo("Ethernet", 1, "AA-BB-CC-DD-EE-01", "Intel Ethernet", "Up",
-                        [("192.168.10.100", 24)]),
+                        [("192.168.0.100", 24)]),
             AdapterInfo("Ethernet 2", 2, "AA-BB-CC-DD-EE-02", "USB Ethernet Adapter", "Up",
-                        [("169.254.12.33", 16)]),
+                        [("192.168.1.100", 24)]),
             AdapterInfo("Wi-Fi", 3, "AA-BB-CC-DD-EE-03", "Wireless LAN Adapter", "Disconnected", []),
         ]
 
@@ -72,12 +72,12 @@ ConvertTo-Json -Depth 3 $result
 
 def find_adapter_by_match(match_by: dict) -> Optional[AdapterInfo]:
     adapters = list_adapters()
-    if mac := match_by.get("adapter_name"):
+    if name := match_by.get("adapter_name"):
         for a in adapters:
-            if a.name.lower() == mac.lower():
+            if a.name.lower() == name.lower():
                 return a
-    if name := match_by.get("mac_address"):
-        norm = name.upper().replace(":", "-")
+    if mac := match_by.get("mac_address"):
+        norm = mac.upper().replace(":", "-")
         for a in adapters:
             if a.mac.upper().replace(":", "-") == norm:
                 return a

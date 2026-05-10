@@ -14,12 +14,12 @@ from app.checks.network_components import (
 _SETTINGS_DATA = {
     "network_components": {
         "ping_timeout_seconds": 3,
-        "subnet_source_ips": {0: "192.168.10.100", 1: "192.168.20.100"},
+        "subnet_source_ips": {0: "192.168.0.100", 1: "192.168.1.100"},
         "components": [
-            {"name": "Autopilot", "ip": "192.168.10.1", "subnet": 0, "required": True},
-            {"name": "GCS Video Receiver", "ip": "192.168.10.50", "subnet": 0, "required": False},
-            {"name": "Payload Computer", "ip": "192.168.20.1", "subnet": 1, "required": True},
-            {"name": "Camera Control Unit", "ip": "192.168.20.10", "subnet": 1, "required": False},
+            {"name": "Autopilot", "ip": "192.168.0.1", "subnet": 0, "required": True},
+            {"name": "GCS Video Receiver", "ip": "192.168.0.50", "subnet": 0, "required": False},
+            {"name": "Payload Computer", "ip": "192.168.1.1", "subnet": 1, "required": True},
+            {"name": "Camera Control Unit", "ip": "192.168.1.10", "subnet": 1, "required": False},
         ],
     }
 }
@@ -40,7 +40,7 @@ class TestLoadSpecs:
     def test_component_fields(self):
         specs = _load_specs(_settings())
         ap = next(s for s in specs if s.name == "Autopilot")
-        assert ap.ip == "192.168.10.1"
+        assert ap.ip == "192.168.0.1"
         assert ap.subnet == 0
         assert ap.required is True
 
@@ -89,8 +89,8 @@ class TestPingSpec:
 
     def test_source_ip_forwarded_to_ping_host(self):
         with patch("app.checks.network_components.ping_host", return_value=True) as mock_ping:
-            _ping_spec(self._spec(), source_ip="192.168.10.100", timeout=3)
-        mock_ping.assert_called_once_with("192.168.10.5", timeout_seconds=3, source_ip="192.168.10.100")
+            _ping_spec(self._spec(), source_ip="192.168.0.100", timeout=3)
+        mock_ping.assert_called_once_with("192.168.10.5", timeout_seconds=3, source_ip="192.168.0.100")
 
 
 # ---------------------------------------------------------------------------
@@ -118,8 +118,8 @@ class TestRunComponentPingChecks:
         with patch("app.checks.network_components.ping_host", side_effect=recording_ping):
             run_component_ping_checks(_settings())
 
-        subnet0_hosts = {"192.168.10.1", "192.168.10.50"}
-        subnet1_hosts = {"192.168.20.1", "192.168.20.10"}
+        subnet0_hosts = {"192.168.0.1", "192.168.0.50"}
+        subnet1_hosts = {"192.168.1.1", "192.168.1.10"}
 
         last_subnet0 = max(i for i, h in enumerate(call_order) if h in subnet0_hosts)
         first_subnet1 = min(i for i, h in enumerate(call_order) if h in subnet1_hosts)
@@ -137,10 +137,10 @@ class TestRunComponentPingChecks:
             run_component_ping_checks(_settings())
 
         for c in calls:
-            if c["host"].startswith("192.168.10."):
-                assert c["source_ip"] == "192.168.10.100", f"Wrong source for {c['host']}"
-            elif c["host"].startswith("192.168.20."):
-                assert c["source_ip"] == "192.168.20.100", f"Wrong source for {c['host']}"
+            if c["host"].startswith("192.168.0."):
+                assert c["source_ip"] == "192.168.0.100", f"Wrong source for {c['host']}"
+            elif c["host"].startswith("192.168.1."):
+                assert c["source_ip"] == "192.168.1.100", f"Wrong source for {c['host']}"
 
     def test_all_pass_when_all_reachable(self):
         with patch("app.checks.network_components.ping_host", return_value=True):
