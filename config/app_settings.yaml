@@ -1,0 +1,55 @@
+app:
+  name: "Ground Station Precheck Manager"
+  version: "1.0.0"
+
+paths:
+  data_dir: "./data"
+  config_bundle_dir: "./data/config_bundle"
+  sources_dir: "./data/sources"
+  mission_planner_dir: "%USERPROFILE%/Documents/Mission Planner"
+  backup_dir: "./backups"
+
+features:
+  enable_apply_profile: true
+  enable_backups: true
+  enable_gitlab_sync: true
+  enable_smb_sync: true
+  enable_network_device_checks: false
+  enable_network_apply: true
+
+sync:
+  server_ip: "192.168.1.1"
+  require_server_reachable_before_sync: true
+  temporarily_switch_interface_to_dhcp: true
+  restore_interface_after_sync: true
+  server_reachability_timeout_seconds: 10
+  dhcp_wait_timeout_seconds: 30
+
+tools:
+  git_executable: "git"
+
+sources:
+  gitlab:
+    enabled: true
+    repositories:
+      - name: "mission-configs"
+        url: "http://192.168.1.1/group/mission-configs.git"
+        branch: "main"
+        local_path: "./data/sources/gitlab/mission-configs"
+
+      - name: "network-configs"
+        url: "http://192.168.1.1/group/network-configs.git"
+        branch: "main"
+        local_path: "./data/sources/gitlab/network-configs"
+
+  smb:
+    enabled: true
+    shares:
+      - name: "ground-station-configs"
+        source_path: "\\\\192.168.1.1\\GroundStationConfigs"
+        local_path: "./data/sources/smb/ground-station-configs"
+
+network:
+  sync_interface:
+    match_by:
+      adapter_name: "Ethernet"
