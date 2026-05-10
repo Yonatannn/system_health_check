@@ -53,3 +53,29 @@ network:
   sync_interface:
     match_by:
       adapter_name: "Ethernet"
+
+network_components:
+  ping_timeout_seconds: 5
+  subnet_source_ips:
+    0: "192.168.10.100"
+    1: "192.168.20.100"
+  components:
+    - name: "Autopilot"
+      ip: "192.168.10.1"
+      subnet: 0
+      required: true
+
+    - name: "GCS Video Receiver"
+      ip: "192.168.10.50"
+      subnet: 0
+      required: false
+
+    - name: "Payload Computer"
+      ip: "192.168.20.1"
+      subnet: 1
+      required: true
+
+    - name: "Camera Control Unit"
+      ip: "192.168.20.10"
+      subnet: 1
+      required: false

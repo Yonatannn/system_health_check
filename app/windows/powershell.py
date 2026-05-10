@@ -42,17 +42,23 @@ def run_ps(command: str, timeout: int = 30) -> PSResult:
         return PSResult(stdout="", stderr=str(e), exit_code=-1, exception=str(e))
 
 
-def ping_host(host: str, timeout_seconds: int = 5) -> bool:
-    """Returns True if host is reachable."""
+def ping_host(host: str, timeout_seconds: int = 5, source_ip: Optional[str] = None) -> bool:
+    """Returns True if host is reachable. source_ip pins the outgoing interface."""
     if IS_WINDOWS:
-        result = run_ps(f"Test-Connection -ComputerName {host} -Count 1 -Quiet -ErrorAction SilentlyContinue",
-                        timeout=timeout_seconds + 5)
+        source_clause = f"-Source {source_ip}" if source_ip else ""
+        result = run_ps(
+            f"Test-Connection -ComputerName {host} {source_clause} -Count 1 -Quiet -ErrorAction SilentlyContinue",
+            timeout=timeout_seconds + 5,
+        )
         return result.success and "True" in result.stdout
     else:
         import subprocess as sp
         try:
-            r = sp.run(["ping", "-c", "1", "-W", str(timeout_seconds), host],
-                       capture_output=True, timeout=timeout_seconds + 2)
+            cmd = ["ping", "-c", "1", "-W", str(timeout_seconds)]
+            if source_ip:
+                cmd += ["-I", source_ip]
+            cmd.append(host)
+            r = sp.run(cmd, capture_output=True, timeout=timeout_seconds + 2)
             return r.returncode == 0
         except Exception:
             return False
