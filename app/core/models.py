@@ -144,7 +144,6 @@ class BundleManifest:
     created_at: str
     schema_version: str
     gitlab_sources: list[BundleSource] = field(default_factory=list)
-    smb_sources: list[BundleSource] = field(default_factory=list)
     profile_ids: list[str] = field(default_factory=list)
     is_valid: bool = True
     validation_error: Optional[str] = None

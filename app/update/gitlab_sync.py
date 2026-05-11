@@ -54,10 +54,18 @@ def sync_repository(name: str, url: str, branch: str, local_path: Path,
         rc, _, err = _run_git(["clean", "-fd"], cwd=local_path, git_exe=git_exe)
         if rc != 0:
             log(f"[{name}] Warning: git clean failed: {err}")
+
+        log(f"[{name}] Updating submodules…")
+        rc, _, err = _run_git(["submodule", "update", "--init", "--recursive"], cwd=local_path, git_exe=git_exe)
+        if rc != 0:
+            log(f"[{name}] Warning: submodule update failed: {err}")
     else:
         log(f"[{name}] Cloning {url}…")
         local_path.parent.mkdir(parents=True, exist_ok=True)
-        rc, _, err = _run_git(["clone", "--branch", branch, url, str(local_path)], git_exe=git_exe)
+        rc, _, err = _run_git(
+            ["clone", "--recurse-submodules", "--branch", branch, url, str(local_path)],
+            git_exe=git_exe,
+        )
         if rc != 0:
             return GitSyncResult(name=name, success=False, error=f"git clone failed: {err}")
 

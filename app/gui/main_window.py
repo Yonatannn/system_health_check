@@ -8,7 +8,6 @@ from app.core.paths import AppPaths
 from app.core.config_loader import AppSettings
 from app.gui.precheck_tab import PrecheckTab
 from app.gui.update_tab import UpdateTab
-from app.gui.settings_tab import SettingsTab
 from app.gui.diagnostics_tab import DiagnosticsTab
 
 
@@ -36,9 +35,6 @@ class MainWindow(QMainWindow):
         self._update_tab.sync_completed.connect(self._on_sync_completed)
         tabs.addTab(self._update_tab, "Update Bundle")
 
-        self._settings_tab = SettingsTab(self.paths, self.settings)
-        tabs.addTab(self._settings_tab, "Settings")
-
         self._diagnostics_tab = DiagnosticsTab(self.paths, self.settings)
         tabs.addTab(self._diagnostics_tab, "Diagnostics")
 
@@ -53,7 +49,7 @@ class MainWindow(QMainWindow):
         self.setStyleSheet("""
             QMainWindow { background-color: #fafafa; }
             QTabWidget::pane { border: 1px solid #e0e0e0; }
-            QTabBar::tab { padding: 8px 20px; font-size: 12px; }
+            QTabBar::tab { padding: 8px 32px; font-size: 12px; min-width: 100px; }
             QTabBar::tab:selected { color: #1565c0; border-bottom: 2px solid #1565c0; font-weight: bold; }
             QGroupBox { font-weight: bold; border: 1px solid #e0e0e0; border-radius: 4px; margin-top: 8px; padding-top: 8px; }
             QGroupBox::title { subcontrol-origin: margin; left: 10px; }

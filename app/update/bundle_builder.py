@@ -24,7 +24,6 @@ def _copy_tree(src: Path, dst: Path):
 
 def _compute_source_checksums(
     sources_gitlab_dir: Path,
-    sources_smb_dir: Path,
     settings_sources: dict,
     log: Callable[[str], None],
 ) -> dict[str, str]:
@@ -44,26 +43,11 @@ def _compute_source_checksums(
                         rel = file_path.relative_to(local_path).as_posix()
                         checksums[rel] = sha256_file(file_path)
 
-    for share in settings_sources.get("smb", {}).get("shares", []):
-        name = share.get("name", "")
-        local_path = Path(share.get("local_path", str(sources_smb_dir / name)))
-        if not local_path.exists():
-            continue
-        log(f"Hashing files from SMB source: {name}…")
-        for sub in TRACKED_SUBDIRS:
-            src_sub = local_path / sub
-            if src_sub.exists():
-                for file_path in sorted(src_sub.rglob("*")):
-                    if file_path.is_file():
-                        rel = file_path.relative_to(local_path).as_posix()
-                        checksums[rel] = sha256_file(file_path)
-
     return checksums
 
 
 def build_bundle(
     sources_gitlab_dir: Path,
-    sources_smb_dir: Path,
     existing_bundle_dir: Path,
     output_bundle_dir: Path,
     gitlab_commits: dict[str, Optional[str]],
@@ -89,9 +73,7 @@ def build_bundle(
             (tmp_path / "profiles").mkdir()
 
         log("Computing checksums from sources…")
-        checksums = _compute_source_checksums(
-            sources_gitlab_dir, sources_smb_dir, settings_sources, log
-        )
+        checksums = _compute_source_checksums(sources_gitlab_dir, settings_sources, log)
 
         log("Generating bundle manifest…")
         _write_manifest(tmp_path, settings_sources, gitlab_commits)
@@ -128,12 +110,6 @@ def _write_manifest(bundle_dir: Path, settings_sources: dict, gitlab_commits: di
             "branch": repo.get("branch", "main"),
             "commit": gitlab_commits.get(repo.get("name"), "UNKNOWN"),
         })
-    smb_sources = []
-    for share in settings_sources.get("smb", {}).get("shares", []):
-        smb_sources.append({
-            "name": share.get("name"),
-            "source_path": share.get("source_path"),
-        })
 
     profiles = []
     profiles_dir = bundle_dir / "profiles"
@@ -157,7 +133,6 @@ def _write_manifest(bundle_dir: Path, settings_sources: dict, gitlab_commits: di
         },
         "sources": {
             "gitlab": gitlab_sources,
-            "smb": smb_sources,
         },
         "profiles": profiles,
     }

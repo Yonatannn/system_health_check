@@ -75,13 +75,6 @@ class UpdateTab(QWidget):
             for r in repos:
                 info_layout.addWidget(QLabel(f"  • {r.get('name', '')} — {r.get('url', '')}"))
 
-        # SMB shares list
-        shares = self.settings.smb_shares
-        if shares:
-            info_layout.addWidget(QLabel("SMB Shares:"))
-            for s in shares:
-                info_layout.addWidget(QLabel(f"  • {s.get('name', '')} — {s.get('source_path', '')}"))
-
         main.addWidget(info_group)
 
         # Admin warning

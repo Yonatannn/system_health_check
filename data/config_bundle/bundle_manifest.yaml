@@ -6,19 +6,15 @@ bundle:
 
 sources:
   gitlab:
-    - name: "mission-configs"
-      url: "http://192.168.1.1/group/mission-configs.git"
+    - name: "copter-configs"
+      url: "http://192.168.1.1/group/copter-configs.git"
       branch: "main"
       commit: "UNKNOWN_UNTIL_SYNCED"
 
-    - name: "network-configs"
-      url: "http://192.168.1.1/group/network-configs.git"
+    - name: "plane-configs"
+      url: "http://192.168.1.1/group/plane-configs.git"
       branch: "main"
       commit: "UNKNOWN_UNTIL_SYNCED"
-
-  smb:
-    - name: "ground-station-configs"
-      source_path: "\\\\192.168.1.1\\GroundStationConfigs"
 
 profiles:
   - id: "plane"
