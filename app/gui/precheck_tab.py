@@ -26,11 +26,10 @@ class PrecheckWorker(QThread):
     finished = pyqtSignal(list)
     error = pyqtSignal(str)
 
-    def __init__(self, profile: Profile, bundle_dir: Path, settings: AppSettings):
+    def __init__(self, profile: Profile, bundle_dir: Path):
         super().__init__()
         self.profile = profile
         self.bundle_dir = bundle_dir
-        self.settings = settings
 
     def run(self):
         try:
@@ -44,9 +43,9 @@ class PrecheckWorker(QThread):
                 r.status == CheckStatus.FAIL and r.blocking for r in interface_results
             )
             if interfaces_ok:
-                results.extend(run_component_ping_checks(self.settings))
+                results.extend(run_component_ping_checks(self.profile))
             else:
-                results.extend(make_skipped_ping_checks(self.settings))
+                results.extend(make_skipped_ping_checks(self.profile))
 
             results.extend(run_mission_planner_checks(self.profile, sha256_manifest))
             results.extend(run_external_file_checks(self.profile, sha256_manifest))
@@ -165,7 +164,7 @@ class PrecheckTab(QWidget):
             self._bundle_label.setText("Bundle: not found — run sync to download configuration")
 
     def _load_profiles(self):
-        self.profiles = load_all_profiles(self.paths.config_bundle_dir / "profiles")
+        self.profiles = load_all_profiles(self.paths.profiles_dir)
         self._profile_combo.clear()
         for p in self.profiles:
             self._profile_combo.addItem(p.display_name, p)
@@ -188,7 +187,7 @@ class PrecheckTab(QWidget):
         self._clear_results()
         self._status_label.setText("Running…")
 
-        self._worker = PrecheckWorker(profile, self.paths.config_bundle_dir, self.settings)
+        self._worker = PrecheckWorker(profile, self.paths.config_bundle_dir)
         self._worker.finished.connect(self._on_check_done)
         self._worker.error.connect(self._on_check_error)
         self._worker.start()

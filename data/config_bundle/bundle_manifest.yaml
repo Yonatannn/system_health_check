@@ -15,12 +15,3 @@ sources:
       url: "http://192.168.1.1/group/plane-configs.git"
       branch: "main"
       commit: "UNKNOWN_UNTIL_SYNCED"
-
-profiles:
-  - id: "plane"
-    display_name: "Plane"
-    file: "profiles/plane_field.yaml"
-
-  - id: "copter"
-    display_name: "Copter"
-    file: "profiles/copter_field.yaml"

@@ -119,11 +119,26 @@ class MissionPlannerSpec:
 
 
 @dataclass
+class NetworkComponentSpec:
+    name: str
+    ip: str
+    interface_id: str
+    required: bool = True
+
+
+@dataclass
+class NetworkComponentsConfig:
+    ping_timeout_seconds: int = 5
+    components: list[NetworkComponentSpec] = field(default_factory=list)
+
+
+@dataclass
 class Profile:
     id: str
     display_name: str
     description: str = ""
     windows_interfaces: list[InterfaceSpec] = field(default_factory=list)
+    network_components: Optional[NetworkComponentsConfig] = None
     mission_planner: Optional[MissionPlannerSpec] = None
     external_files: list[FileCheckSpec] = field(default_factory=list)
 
@@ -134,7 +149,6 @@ class BundleSource:
     url: Optional[str] = None
     branch: Optional[str] = None
     commit: Optional[str] = None
-    source_path: Optional[str] = None
 
 
 @dataclass
@@ -144,6 +158,5 @@ class BundleManifest:
     created_at: str
     schema_version: str
     gitlab_sources: list[BundleSource] = field(default_factory=list)
-    profile_ids: list[str] = field(default_factory=list)
     is_valid: bool = True
     validation_error: Optional[str] = None

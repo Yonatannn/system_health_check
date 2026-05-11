@@ -1,37 +1,15 @@
 from __future__ import annotations
-from dataclasses import dataclass
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional
 
-from app.core.config_loader import AppSettings
-from app.core.models import CheckResult
+from app.core.models import CheckResult, Profile, NetworkComponentSpec
 from app.core.result import make_pass, make_fail, make_skipped
 from app.windows.powershell import ping_host
 
 CATEGORY = "Network Components"
 
 
-@dataclass
-class ComponentPingSpec:
-    name: str
-    ip: str
-    subnet: int
-    required: bool = True
-
-
-def _load_specs(settings: AppSettings) -> list[ComponentPingSpec]:
-    raw = settings.get("network_components", "components", default=[]) or []
-    return [
-        ComponentPingSpec(
-            name=item.get("name", "Unknown"),
-            ip=item.get("ip", ""),
-            subnet=int(item.get("subnet", 0)),
-            required=bool(item.get("required", True)),
-        )
-        for item in raw
-    ]
-
-
-def _ping_spec(spec: ComponentPingSpec, source_ip: Optional[str], timeout: int) -> CheckResult:
+def _ping_spec(spec: NetworkComponentSpec, source_ip: Optional[str], timeout: int) -> CheckResult:
     result_id = f"component_ping_{spec.name.lower().replace(' ', '_')}"
     reachable = ping_host(spec.ip, timeout_seconds=timeout, source_ip=source_ip)
     if reachable:
@@ -66,9 +44,10 @@ def _ping_spec(spec: ComponentPingSpec, source_ip: Optional[str], timeout: int) 
     )
 
 
-def make_skipped_ping_checks(settings: AppSettings) -> list[CheckResult]:
+def make_skipped_ping_checks(profile: Profile) -> list[CheckResult]:
     """Return SKIPPED results for all components — used when interfaces are misconfigured."""
-    specs = _load_specs(settings)
+    if not profile.network_components:
+        return []
     return [
         make_skipped(
             id=f"component_ping_{spec.name.lower().replace(' ', '_')}",
@@ -79,27 +58,36 @@ def make_skipped_ping_checks(settings: AppSettings) -> list[CheckResult]:
                 "does not have the correct IP address. Fix the adapter IP first, then re-run the check."
             ),
         )
-        for spec in specs
+        for spec in profile.network_components.components
     ]
 
 
-def run_component_ping_checks(settings: AppSettings) -> list[CheckResult]:
-    specs = _load_specs(settings)
-    if not specs:
+def run_component_ping_checks(profile: Profile) -> list[CheckResult]:
+    if not profile.network_components:
         return []
 
-    timeout = int(settings.get("network_components", "ping_timeout_seconds", default=5))
-    raw_source_ips = settings.get("network_components", "subnet_source_ips", default={}) or {}
-    subnet_source_ips: dict[int, str] = {int(k): v for k, v in raw_source_ips.items()}
+    comp_config = profile.network_components
+    timeout = comp_config.ping_timeout_seconds
 
-    by_subnet: dict[int, list[ComponentPingSpec]] = {}
-    for spec in specs:
-        by_subnet.setdefault(spec.subnet, []).append(spec)
+    # Derive source IP for each interface from its expected_ipv4 address
+    iface_source_ips: dict[str, str] = {
+        iface.id: iface.expected_ipv4.address
+        for iface in profile.windows_interfaces
+        if iface.expected_ipv4
+    }
 
-    results: list[CheckResult] = []
-    for subnet_idx in sorted(by_subnet.keys()):
-        source_ip = subnet_source_ips.get(subnet_idx)
-        for spec in by_subnet[subnet_idx]:
-            results.append(_ping_spec(spec, source_ip, timeout))
+    components = comp_config.components
+    results: list[Optional[CheckResult]] = [None] * len(components)
 
-    return results
+    def _ping_one(idx: int, spec: NetworkComponentSpec) -> tuple[int, CheckResult]:
+        source_ip = iface_source_ips.get(spec.interface_id)
+        return idx, _ping_spec(spec, source_ip, timeout)
+
+    # Ping all components in parallel — subnet 0 and subnet 1 fire simultaneously
+    with ThreadPoolExecutor() as executor:
+        futures = {executor.submit(_ping_one, i, spec): i for i, spec in enumerate(components)}
+        for future in as_completed(futures):
+            idx, result = future.result()
+            results[idx] = result
+
+    return [r for r in results if r is not None]

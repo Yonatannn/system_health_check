@@ -55,8 +55,8 @@ def build_bundle(
     log: Optional[Callable[[str], None]] = None,
 ) -> Path:
     """
-    Build a config bundle from synced sources.
-    Stores only SHA256 checksums — no config files are copied into the bundle.
+    Build a config bundle from synced GitLab sources.
+    Stores only SHA256 checksums of reference files.
     Works atomically: writes to a temp dir, validates, then replaces output_bundle_dir.
     """
     log = log or (lambda msg: None)
@@ -64,13 +64,6 @@ def build_bundle(
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp) / "bundle"
         tmp_path.mkdir()
-
-        log("Copying profiles from existing bundle…")
-        existing_profiles = existing_bundle_dir / "profiles"
-        if existing_profiles.exists():
-            _copy_tree(existing_profiles, tmp_path / "profiles")
-        else:
-            (tmp_path / "profiles").mkdir()
 
         log("Computing checksums from sources…")
         checksums = _compute_source_checksums(sources_gitlab_dir, settings_sources, log)
@@ -111,19 +104,6 @@ def _write_manifest(bundle_dir: Path, settings_sources: dict, gitlab_commits: di
             "commit": gitlab_commits.get(repo.get("name"), "UNKNOWN"),
         })
 
-    profiles = []
-    profiles_dir = bundle_dir / "profiles"
-    if profiles_dir.exists():
-        for f in sorted(profiles_dir.glob("*.yaml")):
-            try:
-                with open(f) as fh:
-                    d = yaml.safe_load(fh) or {}
-                pid = d.get("profile", {}).get("id", f.stem)
-                pname = d.get("profile", {}).get("display_name", pid)
-                profiles.append({"id": pid, "display_name": pname, "file": f"profiles/{f.name}"})
-            except Exception:
-                pass
-
     manifest = {
         "bundle": {
             "name": "Ground Station Config Bundle",
@@ -134,7 +114,6 @@ def _write_manifest(bundle_dir: Path, settings_sources: dict, gitlab_commits: di
         "sources": {
             "gitlab": gitlab_sources,
         },
-        "profiles": profiles,
     }
     with open(bundle_dir / "bundle_manifest.yaml", "w", encoding="utf-8") as f:
         yaml.dump(manifest, f, default_flow_style=False, allow_unicode=True)
