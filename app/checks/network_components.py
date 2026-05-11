@@ -44,32 +44,15 @@ def _ping_spec(spec: NetworkComponentSpec, source_ip: Optional[str], timeout: in
     )
 
 
-def make_skipped_ping_checks(profile: Profile) -> list[CheckResult]:
-    """Return SKIPPED results for all components — used when interfaces are misconfigured."""
-    if not profile.network_components:
-        return []
-    return [
-        make_skipped(
-            id=f"component_ping_{spec.name.lower().replace(' ', '_')}",
-            category=CATEGORY,
-            title=f"{spec.name} — Skipped",
-            details=(
-                f"Ping to {spec.name} ({spec.ip}) was skipped because the network adapter "
-                "does not have the correct IP address. Fix the adapter IP first, then re-run the check."
-            ),
-        )
-        for spec in profile.network_components.components
-    ]
-
-
-def run_component_ping_checks(profile: Profile) -> list[CheckResult]:
+def run_component_ping_checks(profile: Profile, failed_iface_ids: set[str] | None = None) -> list[CheckResult]:
+    """Ping components whose interface passed; skip components whose interface failed."""
     if not profile.network_components:
         return []
 
+    failed_iface_ids = failed_iface_ids or set()
     comp_config = profile.network_components
     timeout = comp_config.ping_timeout_seconds
 
-    # Derive source IP for each interface from its expected_ipv4 address
     iface_source_ips: dict[str, str] = {
         iface.id: iface.expected_ipv4.address
         for iface in profile.windows_interfaces
@@ -79,13 +62,26 @@ def run_component_ping_checks(profile: Profile) -> list[CheckResult]:
     components = comp_config.components
     results: list[Optional[CheckResult]] = [None] * len(components)
 
+    to_ping = [(i, spec) for i, spec in enumerate(components) if spec.interface_id not in failed_iface_ids]
+    to_skip = [(i, spec) for i, spec in enumerate(components) if spec.interface_id in failed_iface_ids]
+
+    for i, spec in to_skip:
+        results[i] = make_skipped(
+            id=f"component_ping_{spec.name.lower().replace(' ', '_')}",
+            category=CATEGORY,
+            title=f"{spec.name} — Skipped",
+            details=(
+                f"Ping to {spec.name} ({spec.ip}) was skipped because the network adapter "
+                "does not have the correct IP address. Fix the adapter IP first, then re-run the check."
+            ),
+        )
+
     def _ping_one(idx: int, spec: NetworkComponentSpec) -> tuple[int, CheckResult]:
         source_ip = iface_source_ips.get(spec.interface_id)
         return idx, _ping_spec(spec, source_ip, timeout)
 
-    # Ping all components in parallel — subnet 0 and subnet 1 fire simultaneously
     with ThreadPoolExecutor() as executor:
-        futures = {executor.submit(_ping_one, i, spec): i for i, spec in enumerate(components)}
+        futures = {executor.submit(_ping_one, i, spec): i for i, spec in to_ping}
         for future in as_completed(futures):
             idx, result = future.result()
             results[idx] = result
