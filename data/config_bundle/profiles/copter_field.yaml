@@ -1,34 +1,34 @@
 profile:
-  id: "copter_field"
-  display_name: "Copter - Field"
-  description: "Copter field configuration for the ground station."
+  id: "copter"
+  display_name: "Copter"
+  description: "Multicopter — ground station pre-flight configuration check."
 
 windows_interfaces:
-  - id: "main_pc_interface"
-    display_name: "Main PC Interface"
+  - id: "autopilot_link"
+    display_name: "Autopilot Link (Ethernet)"
     required: true
     match_by:
       adapter_name: "Ethernet"
     expected_ipv4:
-      address: "192.168.0.100"
+      address: "192.168.10.100"
       prefix_length: 24
 
-  - id: "usb_network_adapter"
-    display_name: "USB Network Adapter"
+  - id: "gimbal_link"
+    display_name: "Gimbal & Payload Link (Ethernet 2)"
     required: true
     match_by:
       adapter_name: "Ethernet 2"
     expected_ipv4:
-      address: "192.168.1.100"
+      address: "192.168.20.100"
       prefix_length: 24
 
 mission_planner:
   base_path: "%USERPROFILE%/Documents/Mission Planner"
   files:
     - id: "joystick"
-      display_name: "Joystick XML"
+      display_name: "Joystick Configuration (joystick.xml)"
       target_path: "joystick.xml"
-      expected_file: "mission_planner/copter_field/joystick.xml"
+      expected_file: "mission_planner/copter/joystick.xml"
       required: true
       type: "xml"
       checks:
@@ -37,9 +37,9 @@ mission_planner:
         sha256_match: true
 
     - id: "planner_config"
-      display_name: "Mission Planner Config"
+      display_name: "Mission Planner Settings (config.xml)"
       target_path: "config.xml"
-      expected_file: "mission_planner/copter_field/config.xml"
+      expected_file: "mission_planner/copter/config.xml"
       required: true
       type: "xml"
       checks:
@@ -48,10 +48,19 @@ mission_planner:
         sha256_match: true
 
 external_files:
+  - id: "gimbal_config"
+    display_name: "Gimbal Controller Configuration"
+    target_path: "C:/Arc/Gimbal/config.json"
+    expected_file: "external_configs/gimbal/copter/config.json"
+    required: true
+    checks:
+      exists: true
+      sha256_match: true
+
   - id: "camera_config"
-    display_name: "Camera Configuration"
-    target_path: "C:/Arc/Camera/config.json"
-    expected_file: "external_configs/camera/copter_field/config.json"
+    display_name: "Camera System Configuration"
+    target_path: "C:/Arc/Camera/copter_config.json"
+    expected_file: "external_configs/camera/copter/config.json"
     required: false
     checks:
       exists: true

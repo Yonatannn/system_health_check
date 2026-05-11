@@ -21,10 +21,10 @@ sources:
       source_path: "\\\\192.168.1.1\\GroundStationConfigs"
 
 profiles:
-  - id: "plane_field"
-    display_name: "Plane - Field"
+  - id: "plane"
+    display_name: "Plane"
     file: "profiles/plane_field.yaml"
 
-  - id: "copter_field"
-    display_name: "Copter - Field"
+  - id: "copter"
+    display_name: "Copter"
     file: "profiles/copter_field.yaml"

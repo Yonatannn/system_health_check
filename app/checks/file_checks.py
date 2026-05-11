@@ -22,7 +22,6 @@ def check_file_spec(
     category: str,
     base_path: str = "",
 ) -> list[CheckResult]:
-    """Check a single file spec against the SHA256 manifest."""
     results = []
     target = (
         Path(os.path.expandvars(base_path)) / spec.target_path
@@ -38,7 +37,10 @@ def check_file_spec(
                 id=f"{spec.id}_baseline",
                 category=category,
                 title=f"{spec.display_name} — Not in Bundle",
-                details="No SHA256 checksum found in bundle manifest. Run a sync to update the bundle.",
+                details=(
+                    f"No approved baseline found for '{spec.display_name}' in the configuration bundle. "
+                    "Connect to the configuration server and use the Update Bundle tab to download the latest bundle."
+                ),
             ))
         else:
             results.append(make_skipped(
@@ -52,9 +54,14 @@ def check_file_spec(
         results.append(make_fail(
             id=f"{spec.id}_exists",
             category=category,
-            title=f"{spec.display_name} — Not Found",
+            title=f"{spec.display_name} — File Missing",
             expected=str(target),
-            actual="not found",
+            actual="file not found",
+            details=(
+                f"Expected file not found at: {target}\n"
+                "Click 'Apply Profile' to copy the correct file from the bundle. "
+                "If Apply Profile is unavailable, run an Update Bundle sync first."
+            ),
             blocking=spec.required,
         ))
         return results
@@ -76,8 +83,13 @@ def check_file_spec(
         else:
             results.append(make_fail(
                 id=f"{spec.id}_xml", category=category,
-                title=f"{spec.display_name} — XML Invalid",
-                details=err, blocking=spec.required,
+                title=f"{spec.display_name} — XML Corrupted",
+                details=(
+                    f"The file at {target} is not valid XML and cannot be read by Mission Planner. "
+                    f"Parse error: {err}\n"
+                    "Click 'Apply Profile' to restore the correct version from the bundle."
+                ),
+                blocking=spec.required,
             ))
 
     if spec.check_sha256:
@@ -85,14 +97,20 @@ def check_file_spec(
         if actual_hash == expected_hash:
             results.append(make_pass(
                 id=f"{spec.id}_sha256", category=category,
-                title=f"{spec.display_name} — SHA256 Match",
+                title=f"{spec.display_name} — Content Verified",
             ))
         else:
             results.append(make_fail(
                 id=f"{spec.id}_sha256", category=category,
-                title=f"{spec.display_name} — SHA256 Mismatch",
+                title=f"{spec.display_name} — Wrong Version",
                 expected=expected_hash[:16] + "…",
                 actual=actual_hash[:16] + "…",
+                details=(
+                    f"The file at {target} does not match the approved version — "
+                    "it may have been changed manually or belong to a different profile. "
+                    "Click 'Apply Profile' to overwrite it with the correct version. "
+                    "A timestamped backup will be created automatically before overwriting."
+                ),
                 blocking=spec.required,
             ))
 

@@ -1,5 +1,4 @@
 from __future__ import annotations
-import platform
 import sys
 from typing import Optional
 
@@ -78,6 +77,11 @@ def get_interfaces() -> list[dict]:
     return _get_interfaces_mock()
 
 
+def _prefix_to_mask(prefix: int) -> str:
+    mask = (0xFFFFFFFF << (32 - prefix)) & 0xFFFFFFFF
+    return ".".join(str((mask >> (8 * i)) & 0xFF) for i in reversed(range(4)))
+
+
 def _match_interface(spec: InterfaceSpec, interfaces: list[dict]) -> Optional[dict]:
     rule = spec.match_by
     # Priority 1: MAC address
@@ -104,6 +108,43 @@ def _match_interface(spec: InterfaceSpec, interfaces: list[dict]) -> Optional[di
     return None
 
 
+def _not_found_details(spec: InterfaceSpec) -> str:
+    rule = spec.match_by
+    if rule.adapter_name:
+        identifier = f"adapter named '{rule.adapter_name}'"
+    elif rule.mac_address:
+        identifier = f"adapter with MAC address '{rule.mac_address}'"
+    elif rule.description_contains:
+        identifier = f"adapter whose description contains '{rule.description_contains}'"
+    else:
+        identifier = "the configured adapter"
+    return (
+        f"Could not find {identifier}. "
+        "If using a USB network adapter, unplug it and plug it back in, then re-run the check. "
+        "To verify the adapter name: Win+X → Device Manager → Network Adapters."
+    )
+
+
+def _not_up_details(adapter_name: str) -> str:
+    return (
+        f"Adapter '{adapter_name}' was found but is not connected or is disabled. "
+        "Check that the network cable is firmly plugged in on both ends. "
+        "To enable a disabled adapter: Win+R → type 'ncpa.cpl' → "
+        f"right-click '{adapter_name}' → Enable."
+    )
+
+
+def _ip_mismatch_details(adapter_name: str, exp_addr: str, exp_prefix: int) -> str:
+    mask = _prefix_to_mask(exp_prefix)
+    return (
+        f"Adapter '{adapter_name}' has the wrong IP address. "
+        f"To fix: Win+R → type 'ncpa.cpl' → right-click '{adapter_name}' → Properties → "
+        f"Internet Protocol Version 4 (TCP/IPv4) → Properties → "
+        f"select 'Use the following IP address' → "
+        f"set IP Address to {exp_addr}, Subnet mask to {mask}."
+    )
+
+
 def check_interface(spec: InterfaceSpec, interfaces: list[dict]) -> list[CheckResult]:
     results = []
     matched = _match_interface(spec, interfaces)
@@ -113,12 +154,11 @@ def check_interface(spec: InterfaceSpec, interfaces: list[dict]) -> list[CheckRe
             id=f"iface_{spec.id}_exists",
             category=CATEGORY,
             title=f"{spec.display_name} — Not Found",
-            details="No network adapter matched the configured match rule.",
+            details=_not_found_details(spec),
             blocking=spec.required,
         ))
         return results
 
-    # Interface exists
     results.append(make_pass(
         id=f"iface_{spec.id}_exists",
         category=CATEGORY,
@@ -126,7 +166,7 @@ def check_interface(spec: InterfaceSpec, interfaces: list[dict]) -> list[CheckRe
         actual=matched.get("name", ""),
     ))
 
-    # Interface is up
+    adapter_name = matched.get("name", "")
     status = (matched.get("status") or "").lower()
     if status == "up":
         results.append(make_pass(
@@ -139,13 +179,13 @@ def check_interface(spec: InterfaceSpec, interfaces: list[dict]) -> list[CheckRe
         results.append(make_fail(
             id=f"iface_{spec.id}_up",
             category=CATEGORY,
-            title=f"{spec.display_name} — Not Up",
+            title=f"{spec.display_name} — Not Connected",
             expected="Up",
             actual=status or "unknown",
+            details=_not_up_details(adapter_name),
             blocking=spec.required,
         ))
 
-    # IPv4 address check
     if spec.expected_ipv4:
         exp_addr = spec.expected_ipv4.address
         exp_prefix = spec.expected_ipv4.prefix_length
@@ -174,9 +214,10 @@ def check_interface(spec: InterfaceSpec, interfaces: list[dict]) -> list[CheckRe
             results.append(make_fail(
                 id=f"iface_{spec.id}_ipv4",
                 category=CATEGORY,
-                title=f"{spec.display_name} — IPv4 Mismatch",
+                title=f"{spec.display_name} — Wrong IP Address",
                 expected=f"{exp_addr}/{exp_prefix}",
                 actual=actual_ip_str,
+                details=_ip_mismatch_details(adapter_name, exp_addr, exp_prefix),
                 blocking=spec.required,
             ))
 

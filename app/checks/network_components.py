@@ -42,12 +42,26 @@ def _ping_spec(spec: ComponentPingSpec, source_ip: Optional[str], timeout: int) 
             expected=spec.ip,
             actual=spec.ip,
         )
+
+    if spec.required:
+        details = (
+            f"No response from {spec.name} at {spec.ip}. "
+            "Check that the device is powered on and connected with a network cable. "
+            "Verify that the ground station adapter for this subnet has the correct IP address."
+        )
+    else:
+        details = (
+            f"No response from {spec.name} at {spec.ip}. "
+            "This device is optional — the mission can continue, but verify the device is intentionally offline."
+        )
+
     return make_fail(
         id=result_id,
         category=CATEGORY,
-        title=f"{spec.name} — Unreachable",
+        title=f"{spec.name} — Not Responding",
         expected=f"{spec.ip} reachable",
         actual="no response",
+        details=details,
         blocking=spec.required,
     )
 
@@ -60,7 +74,10 @@ def make_skipped_ping_checks(settings: AppSettings) -> list[CheckResult]:
             id=f"component_ping_{spec.name.lower().replace(' ', '_')}",
             category=CATEGORY,
             title=f"{spec.name} — Skipped",
-            details="Skipped: network interface IP is not configured correctly.",
+            details=(
+                f"Ping to {spec.name} ({spec.ip}) was skipped because the network adapter "
+                "does not have the correct IP address. Fix the adapter IP first, then re-run the check."
+            ),
         )
         for spec in specs
     ]
