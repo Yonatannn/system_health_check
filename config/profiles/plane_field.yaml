@@ -3,6 +3,11 @@ profile:
   display_name: "Plane"
   description: "Fixed-wing aircraft — ground station pre-flight configuration check."
 
+source_repo:
+  name: "plane-configs"
+  url: "http://192.168.1.1/group/plane-configs.git"
+  branch: "main"
+
 windows_interfaces:
   - id: "autopilot_link"
     display_name: "Autopilot Link (Ethernet)"

@@ -4,7 +4,7 @@ from typing import Optional
 import yaml
 
 from app.core.models import (
-    Profile, InterfaceSpec, InterfaceMatchRule, ExpectedIPv4,
+    Profile, SourceRepo, InterfaceSpec, InterfaceMatchRule, ExpectedIPv4,
     MissionPlannerSpec, FileCheckSpec, NetworkComponentSpec, NetworkComponentsConfig
 )
 
@@ -72,11 +72,20 @@ def _load_network_components(d: dict) -> NetworkComponentsConfig:
     )
 
 
+def _load_source_repo(d: dict) -> SourceRepo:
+    return SourceRepo(
+        name=d.get("name", ""),
+        url=d.get("url", ""),
+        branch=d.get("branch", "main"),
+    )
+
+
 def load_profile(profile_path: Path) -> Profile:
     with open(profile_path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
 
     prof_meta = data.get("profile", {})
+    repo_raw = data.get("source_repo")
     interfaces_raw = data.get("windows_interfaces", [])
     nc_raw = data.get("network_components")
     mp_raw = data.get("mission_planner")
@@ -86,6 +95,7 @@ def load_profile(profile_path: Path) -> Profile:
         id=prof_meta.get("id", profile_path.stem),
         display_name=prof_meta.get("display_name", profile_path.stem),
         description=prof_meta.get("description", ""),
+        source_repo=_load_source_repo(repo_raw) if repo_raw else None,
         windows_interfaces=[_load_interface(i) for i in interfaces_raw],
         network_components=_load_network_components(nc_raw) if nc_raw else None,
         mission_planner=_load_mission_planner(mp_raw) if mp_raw else None,

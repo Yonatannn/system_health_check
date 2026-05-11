@@ -54,10 +54,6 @@ class AppSettings:
     def sync_interface_match(self) -> dict:
         return self.get("network", "sync_interface", "match_by", default={})
 
-    @property
-    def gitlab_repositories(self) -> list[dict]:
-        return self.get("sources", "gitlab", "repositories", default=[])
-
     def raw(self) -> dict:
         return self._data
 

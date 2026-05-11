@@ -12,19 +12,6 @@ sync:
 features:
   enable_gitlab_sync: true
 
-sources:
-  gitlab:
-    repositories:
-      - name: "copter-configs"
-        url: "http://192.168.1.1/group/copter-configs.git"
-        branch: "main"
-        local_path: "./data/sources/gitlab/copter-configs"
-
-      - name: "plane-configs"
-        url: "http://192.168.1.1/group/plane-configs.git"
-        branch: "main"
-        local_path: "./data/sources/gitlab/plane-configs"
-
 network:
   sync_interface:
     match_by:

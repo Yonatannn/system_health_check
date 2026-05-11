@@ -133,10 +133,18 @@ class NetworkComponentsConfig:
 
 
 @dataclass
+class SourceRepo:
+    name: str
+    url: str
+    branch: str = "main"
+
+
+@dataclass
 class Profile:
     id: str
     display_name: str
     description: str = ""
+    source_repo: Optional[SourceRepo] = None
     windows_interfaces: list[InterfaceSpec] = field(default_factory=list)
     network_components: Optional[NetworkComponentsConfig] = None
     mission_planner: Optional[MissionPlannerSpec] = None
