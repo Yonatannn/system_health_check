@@ -76,6 +76,15 @@ mission_planner:
         sha256_match: true
 
 external_files:
+  - id: "joystick_fcf"
+    display_name: "Joystick Controller Config (joystick.fcf)"
+    target_path: "%USERPROFILE%/Desktop/joystick.fcf"
+    expected_file: "external_configs/joystick/joystick.fcf"
+    required: true
+    checks:
+      exists: true
+      sha256_match: true
+
   - id: "gimbal_config"
     display_name: "Gimbal Controller Configuration"
     target_path: "C:/Arc/Gimbal/config.json"
