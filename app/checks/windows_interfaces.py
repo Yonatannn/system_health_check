@@ -53,7 +53,7 @@ def _get_interfaces_mock() -> list[dict]:
     """Mock data for development/testing on non-Windows."""
     return [
         {
-            "name": "Ethernet",
+            "name": "Ethernet 1",
             "mac": "AA-BB-CC-DD-EE-01",
             "description": "Intel(R) Ethernet Connection",
             "status": "Up",

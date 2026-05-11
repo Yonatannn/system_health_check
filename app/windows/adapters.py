@@ -22,7 +22,7 @@ class AdapterInfo:
 def list_adapters() -> list[AdapterInfo]:
     if not IS_WINDOWS:
         return [
-            AdapterInfo("Ethernet", 1, "AA-BB-CC-DD-EE-01", "Intel Ethernet", "Up",
+            AdapterInfo("Ethernet 1", 1, "AA-BB-CC-DD-EE-01", "Intel Ethernet", "Up",
                         [("192.168.1.100", 24)]),
             AdapterInfo("Ethernet 2", 2, "AA-BB-CC-DD-EE-02", "USB Ethernet Adapter", "Up",
                         [("192.168.1.200", 24)]),
