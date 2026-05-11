@@ -27,13 +27,6 @@ def load_bundle_manifest(bundle_dir: Path) -> Optional[BundleManifest]:
             )
             for s in sources.get("gitlab", [])
         ]
-        smb_sources = [
-            BundleSource(
-                name=s.get("name", ""),
-                source_path=s.get("source_path"),
-            )
-            for s in sources.get("smb", [])
-        ]
 
         return BundleManifest(
             name=bundle_meta.get("name", "Unknown"),
@@ -41,7 +34,6 @@ def load_bundle_manifest(bundle_dir: Path) -> Optional[BundleManifest]:
             created_at=bundle_meta.get("created_at", ""),
             schema_version=bundle_meta.get("schema_version", "1.0"),
             gitlab_sources=gitlab_sources,
-            smb_sources=smb_sources,
             profile_ids=[p.get("id", "") for p in profiles_raw],
             is_valid=True,
         )

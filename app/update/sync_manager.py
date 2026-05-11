@@ -10,7 +10,6 @@ from app.windows.powershell import ping_host
 from app.windows.adapters import find_adapter_by_match
 from app.windows.dhcp_context import DHCPContext, DHCPSwitchError
 from app.update.gitlab_sync import sync_all_repositories, GitSyncResult
-from app.update.smb_sync import sync_all_shares, SMBSyncResult
 from app.update.bundle_builder import build_bundle, BundleBuildError
 
 
@@ -19,7 +18,6 @@ class SyncReport:
     success: bool
     messages: list[str] = field(default_factory=list)
     git_results: list[GitSyncResult] = field(default_factory=list)
-    smb_results: list[SMBSyncResult] = field(default_factory=list)
     bundle_built: bool = False
     error: Optional[str] = None
     interface_restored: bool = True
@@ -120,33 +118,14 @@ class SyncManager:
                     else:
                         report.messages.append(f"GitLab [{r.name}]: FAILED — {r.error}")
 
-        # SMB sync
-        if self.settings.enable_smb_sync:
-            shares = self.settings.smb_shares
-            if shares:
-                self.log("Starting SMB sync…")
-                results = sync_all_shares(
-                    shares=shares,
-                    sources_dir=self.paths.sources_dir,
-                    log=self.log,
-                )
-                report.smb_results = results
-                for r in results:
-                    if r.success:
-                        report.messages.append(f"SMB [{r.name}]: OK")
-                    else:
-                        report.messages.append(f"SMB [{r.name}]: FAILED — {r.error}")
-
         # Build bundle
         any_git_success = any(r.success for r in report.git_results) if report.git_results else True
-        any_smb_success = any(r.success for r in report.smb_results) if report.smb_results else True
 
-        if any_git_success or any_smb_success:
+        if any_git_success:
             self.log("Building config bundle…")
             try:
                 build_bundle(
                     sources_gitlab_dir=self.paths.gitlab_sources_dir,
-                    sources_smb_dir=self.paths.smb_sources_dir,
                     existing_bundle_dir=self.paths.config_bundle_dir,
                     output_bundle_dir=self.paths.config_bundle_dir,
                     gitlab_commits=gitlab_commits,

@@ -51,10 +51,6 @@ class AppSettings:
         return bool(self.get("features", "enable_gitlab_sync", default=True))
 
     @property
-    def enable_smb_sync(self) -> bool:
-        return bool(self.get("features", "enable_smb_sync", default=True))
-
-    @property
     def temporarily_switch_to_dhcp(self) -> bool:
         return bool(self.get("sync", "temporarily_switch_interface_to_dhcp", default=True))
 
@@ -78,10 +74,6 @@ class AppSettings:
     def gitlab_repositories(self) -> list[dict]:
         return self.get("sources", "gitlab", "repositories", default=[])
 
-    @property
-    def smb_shares(self) -> list[dict]:
-        return self.get("sources", "smb", "shares", default=[])
-
     def raw(self) -> dict:
         return self._data
 
@@ -92,9 +84,3 @@ def load_app_settings(settings_path: Path) -> AppSettings:
     with open(settings_path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
     return AppSettings(data)
-
-
-def save_app_settings(settings_path: Path, data: dict):
-    settings_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(settings_path, "w", encoding="utf-8") as f:
-        yaml.dump(data, f, default_flow_style=False, allow_unicode=True)
