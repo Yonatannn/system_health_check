@@ -29,45 +29,71 @@ def _run_git(args: list[str], cwd: Optional[Path] = None, timeout: int = 120) ->
         return -1, "", str(e)
 
 
-def _get_commit(local_path: Path) -> Optional[str]:
-    rc, out, _ = _run_git(["rev-parse", "HEAD"], cwd=local_path)
-    return out if rc == 0 else None
+def _get_commit(local_path: Path, log: Callable[[str], None]) -> Optional[str]:
+    rc, out, err = _run_git(["rev-parse", "HEAD"], cwd=local_path)
+    if rc == 0 and out:
+        return out
+    log(f"  Warning: could not read HEAD commit (rc={rc}): {err or 'no output'}")
+    return None
 
 
 def sync_repository(name: str, url: str, branch: str, local_path: Path,
                     log: Optional[Callable[[str], None]] = None) -> GitSyncResult:
     log = log or (lambda msg: None)
 
+    log(f"[{name}] Local path: {local_path.resolve()}")
+
     if local_path.exists() and (local_path / ".git").exists():
-        log(f"[{name}] Fetching from {url}…")
-        rc, _, err = _run_git(["fetch", "origin"], cwd=local_path)
+        log(f"[{name}] Repo exists — fetching from {url}…")
+        rc, out, err = _run_git(["fetch", "origin"], cwd=local_path)
         if rc != 0:
+            log(f"[{name}] git fetch stderr: {err}")
             return GitSyncResult(name=name, success=False, error=f"git fetch failed: {err}")
+        if err:
+            log(f"[{name}] fetch info: {err}")
 
         log(f"[{name}] Resetting to origin/{branch}…")
-        rc, _, err = _run_git(["reset", "--hard", f"origin/{branch}"], cwd=local_path)
+        rc, out, err = _run_git(["reset", "--hard", f"origin/{branch}"], cwd=local_path)
         if rc != 0:
+            log(f"[{name}] git reset stderr: {err}")
             return GitSyncResult(name=name, success=False, error=f"git reset failed: {err}")
+        log(f"[{name}] Reset: {out or err or 'ok'}")
 
-        rc, _, err = _run_git(["clean", "-fd"], cwd=local_path)
+        rc, out, err = _run_git(["clean", "-fd"], cwd=local_path)
         if rc != 0:
             log(f"[{name}] Warning: git clean failed: {err}")
 
         log(f"[{name}] Updating submodules…")
-        rc, _, err = _run_git(["submodule", "update", "--init", "--recursive"], cwd=local_path)
+        rc, out, err = _run_git(["submodule", "update", "--init", "--recursive"], cwd=local_path)
         if rc != 0:
             log(f"[{name}] Warning: submodule update failed: {err}")
+        elif out or err:
+            log(f"[{name}] Submodules: {out or err}")
     else:
-        log(f"[{name}] Cloning {url}…")
+        if local_path.exists():
+            log(f"[{name}] Directory exists but has no .git — recloning")
+        else:
+            log(f"[{name}] Directory not found — cloning fresh")
+        log(f"[{name}] Cloning {url} (branch: {branch})…")
         local_path.parent.mkdir(parents=True, exist_ok=True)
-        rc, _, err = _run_git(
+        rc, out, err = _run_git(
             ["clone", "--recurse-submodules", "--branch", branch, url, str(local_path)],
         )
         if rc != 0:
+            log(f"[{name}] git clone stderr: {err}")
             return GitSyncResult(name=name, success=False, error=f"git clone failed: {err}")
+        log(f"[{name}] Clone complete")
 
-    commit = _get_commit(local_path)
-    log(f"[{name}] Synced. Commit: {commit or 'unknown'}")
+    commit = _get_commit(local_path, log)
+    log(f"[{name}] HEAD commit: {commit or 'unknown'}")
+
+    # Log top-level directory contents so user can see what was cloned
+    try:
+        entries = sorted(p.name for p in local_path.iterdir())
+        log(f"[{name}] Repo root contents: {', '.join(entries) or '(empty)'}")
+    except Exception:
+        pass
+
     return GitSyncResult(name=name, success=True, commit=commit)
 
 
