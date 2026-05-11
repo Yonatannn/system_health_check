@@ -3,6 +3,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, Callable
 
+import shutil
+
 from app.core.config_loader import AppSettings
 from app.core.paths import AppPaths
 from app.core.profile_loader import load_all_profiles
@@ -146,9 +148,17 @@ class SyncManager:
                 )
                 report.bundle_built = True
                 report.success = True
+                self._cleanup_cloned_repos(repos)
             except BundleBuildError as e:
                 report.error = f"Bundle build failed: {e}"
         else:
             report.error = "All sync sources failed; bundle not updated."
 
         return report
+
+    def _cleanup_cloned_repos(self, repos: list[dict]):
+        for repo in repos:
+            local_path = self.paths.gitlab_sources_dir / repo["name"]
+            if local_path.exists():
+                shutil.rmtree(local_path)
+                self.log(f"Cleaned up cloned repo: {repo['name']}")
