@@ -1,11 +1,11 @@
 profile:
-  id: "plane_field"
-  display_name: "Plane - Field"
-  description: "Plane field configuration for the ground station."
+  id: "plane"
+  display_name: "Plane"
+  description: "Fixed-wing aircraft — ground station pre-flight configuration check."
 
 windows_interfaces:
-  - id: "main_pc_interface"
-    display_name: "Main PC Interface"
+  - id: "autopilot_link"
+    display_name: "Autopilot Link (Ethernet)"
     required: true
     match_by:
       adapter_name: "Ethernet"
@@ -13,22 +13,22 @@ windows_interfaces:
       address: "192.168.0.100"
       prefix_length: 24
 
-  - id: "usb_network_adapter"
-    display_name: "USB Network Adapter"
+  - id: "payload_link"
+    display_name: "Payload Link (Ethernet 2)"
     required: true
     match_by:
       adapter_name: "Ethernet 2"
     expected_ipv4:
-      address: "192.168.1.100"
+      address: "192.168.2.100"
       prefix_length: 24
 
 mission_planner:
   base_path: "%USERPROFILE%/Documents/Mission Planner"
   files:
     - id: "joystick"
-      display_name: "Joystick XML"
+      display_name: "Joystick Configuration (joystick.xml)"
       target_path: "joystick.xml"
-      expected_file: "mission_planner/plane_field/joystick.xml"
+      expected_file: "mission_planner/plane/joystick.xml"
       required: true
       type: "xml"
       checks:
@@ -37,9 +37,9 @@ mission_planner:
         sha256_match: true
 
     - id: "planner_config"
-      display_name: "Mission Planner Config"
+      display_name: "Mission Planner Settings (config.xml)"
       target_path: "config.xml"
-      expected_file: "mission_planner/plane_field/config.xml"
+      expected_file: "mission_planner/plane/config.xml"
       required: true
       type: "xml"
       checks:
@@ -49,9 +49,18 @@ mission_planner:
 
 external_files:
   - id: "camera_config"
-    display_name: "Camera Configuration"
-    target_path: "C:/Arc/Camera/config.json"
-    expected_file: "external_configs/camera/plane_field/config.json"
+    display_name: "Camera System Configuration"
+    target_path: "C:/Arc/Camera/plane_config.json"
+    expected_file: "external_configs/camera/plane/config.json"
+    required: true
+    checks:
+      exists: true
+      sha256_match: true
+
+  - id: "telemetry_config"
+    display_name: "Telemetry Link Configuration"
+    target_path: "C:/Arc/Telemetry/config.ini"
+    expected_file: "external_configs/telemetry/plane/config.ini"
     required: false
     checks:
       exists: true
