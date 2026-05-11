@@ -37,20 +37,6 @@ class SyncManager:
         self.settings = settings
         self.log = log or (lambda msg: None)
 
-    def _collect_repos(self) -> list[dict]:
-        profiles = load_all_profiles(self.paths.profiles_dir)
-        seen: set[str] = set()
-        repos = []
-        for p in profiles:
-            if p.source_repo and p.source_repo.name not in seen:
-                seen.add(p.source_repo.name)
-                repos.append({
-                    "name": p.source_repo.name,
-                    "url": p.source_repo.url,
-                    "branch": p.source_repo.branch,
-                })
-        return repos
-
     def run_sync(self) -> SyncReport:
         report = SyncReport(success=False)
 
@@ -110,10 +96,24 @@ class SyncManager:
         return True
 
     def _run_sync_operations(self, report: SyncReport) -> SyncReport:
-        repos = self._collect_repos()
+        profiles = load_all_profiles(self.paths.profiles_dir)
         self.log(f"Profiles dir: {self.paths.profiles_dir.resolve()}")
+        self.log(f"Profiles loaded: {[p.display_name for p in profiles] or '(none)'}")
+
+        # Collect unique repos from profiles
+        seen: set[str] = set()
+        repos = []
+        for p in profiles:
+            if p.source_repo and p.source_repo.name not in seen:
+                seen.add(p.source_repo.name)
+                repos.append({
+                    "name": p.source_repo.name,
+                    "url": p.source_repo.url,
+                    "branch": p.source_repo.branch,
+                })
         self.log(f"Repos to sync: {[r['name'] for r in repos] or '(none found in profiles)'}")
         self.log(f"GitLab sources dir: {self.paths.gitlab_sources_dir.resolve()}")
+
         gitlab_commits: dict[str, Optional[str]] = {}
 
         if self.settings.enable_gitlab_sync and repos:
@@ -138,8 +138,8 @@ class SyncManager:
             try:
                 build_bundle(
                     sources_gitlab_dir=self.paths.gitlab_sources_dir,
+                    profiles=profiles,
                     repos=repos,
-                    existing_bundle_dir=self.paths.config_bundle_dir,
                     output_bundle_dir=self.paths.config_bundle_dir,
                     gitlab_commits=gitlab_commits,
                     log=self.log,

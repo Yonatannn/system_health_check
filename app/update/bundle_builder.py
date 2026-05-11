@@ -6,62 +6,53 @@ from pathlib import Path
 from typing import Optional, Callable
 import yaml
 
+from app.core.models import Profile
 from app.update.checksum_manifest import sha256_file, write_checksum_manifest
 from app.core.bundle import validate_bundle
-
-TRACKED_SUBDIRS = ("mission_planner", "external_configs")
 
 
 class BundleBuildError(Exception):
     pass
 
 
-def _copy_tree(src: Path, dst: Path):
-    if dst.exists():
-        shutil.rmtree(str(dst))
-    shutil.copytree(str(src), str(dst))
-
-
 def _compute_source_checksums(
     sources_gitlab_dir: Path,
-    repos: list[dict],
+    profiles: list[Profile],
     log: Callable[[str], None],
 ) -> dict[str, str]:
     checksums: dict[str, str] = {}
 
     log(f"Source root: {sources_gitlab_dir.resolve()}")
 
-    if not sources_gitlab_dir.exists():
-        log(f"  ERROR: source root does not exist — no repos have been cloned yet")
-        return checksums
-
-    for repo in repos:
-        name = repo.get("name", "")
-        local_path = sources_gitlab_dir / name
-        log(f"Scanning repo '{name}' at {local_path.resolve()}")
-
-        if not local_path.exists():
-            log(f"  MISSING: repo directory not found — sync may have failed")
+    for profile in profiles:
+        if not profile.source_repo:
+            log(f"[{profile.display_name}] No source_repo defined — skipping")
             continue
 
-        found_any_subdir = False
-        for sub in TRACKED_SUBDIRS:
-            src_sub = local_path / sub
-            if not src_sub.exists():
-                log(f"  Subdir '{sub}/' not found in repo (skipping)")
-                continue
+        repo_dir = sources_gitlab_dir / profile.source_repo.name
+        log(f"[{profile.display_name}] Repo dir: {repo_dir.resolve()}")
 
-            found_any_subdir = True
-            files = sorted(f for f in src_sub.rglob("*") if f.is_file())
-            log(f"  Subdir '{sub}/' — {len(files)} file(s) found")
-            for file_path in files:
-                rel = file_path.relative_to(local_path).as_posix()
-                checksums[rel] = sha256_file(file_path)
-                log(f"    hashed: {rel}")
+        if not repo_dir.exists():
+            log(f"[{profile.display_name}] ERROR: repo directory not found — was sync successful?")
+            continue
 
-        if not found_any_subdir:
-            log(f"  WARNING: neither 'mission_planner/' nor 'external_configs/' found "
-                f"in repo root — check that the repo has the expected directory structure")
+        # Collect every expected_file referenced by this profile
+        expected_files: list[str] = []
+        if profile.mission_planner:
+            for f in profile.mission_planner.files:
+                expected_files.append(f.expected_file)
+        for f in profile.external_files:
+            expected_files.append(f.expected_file)
+
+        log(f"[{profile.display_name}] {len(expected_files)} expected file(s) to hash")
+
+        for rel in expected_files:
+            full_path = repo_dir / rel
+            if full_path.exists():
+                checksums[rel] = sha256_file(full_path)
+                log(f"  OK   {rel}")
+            else:
+                log(f"  MISS {rel}  (not found at {full_path})")
 
     log(f"Total checksums computed: {len(checksums)}")
     return checksums
@@ -69,8 +60,8 @@ def _compute_source_checksums(
 
 def build_bundle(
     sources_gitlab_dir: Path,
+    profiles: list[Profile],
     repos: list[dict],
-    existing_bundle_dir: Path,
     output_bundle_dir: Path,
     gitlab_commits: dict[str, Optional[str]],
     log: Optional[Callable[[str], None]] = None,
@@ -82,10 +73,10 @@ def build_bundle(
         tmp_path.mkdir()
 
         log("--- Computing checksums ---")
-        checksums = _compute_source_checksums(sources_gitlab_dir, repos, log)
+        checksums = _compute_source_checksums(sources_gitlab_dir, profiles, log)
 
         if not checksums:
-            log("WARNING: no files were hashed — bundle will have empty checksum manifest")
+            log("WARNING: no files were hashed — check that expected_file paths match the repo structure")
 
         log("--- Writing bundle manifest ---")
         _write_manifest(tmp_path, repos, gitlab_commits)
@@ -99,7 +90,7 @@ def build_bundle(
             raise BundleBuildError(f"Bundle validation failed: {err}")
 
         log("--- Replacing active bundle ---")
-        log(f"Output bundle dir: {output_bundle_dir.resolve()}")
+        log(f"Output: {output_bundle_dir.resolve()}")
         old_bundle = output_bundle_dir.parent / (output_bundle_dir.name + ".old")
         if old_bundle.exists():
             shutil.rmtree(str(old_bundle))
@@ -124,7 +115,6 @@ def _write_manifest(bundle_dir: Path, repos: list[dict], gitlab_commits: dict):
         }
         for r in repos
     ]
-
     manifest = {
         "bundle": {
             "name": "Ground Station Config Bundle",
@@ -132,9 +122,7 @@ def _write_manifest(bundle_dir: Path, repos: list[dict], gitlab_commits: dict):
             "created_at": datetime.now().isoformat(timespec="seconds"),
             "schema_version": "1.0",
         },
-        "sources": {
-            "gitlab": gitlab_sources,
-        },
+        "sources": {"gitlab": gitlab_sources},
     }
     with open(bundle_dir / "bundle_manifest.yaml", "w", encoding="utf-8") as f:
         yaml.dump(manifest, f, default_flow_style=False, allow_unicode=True)
