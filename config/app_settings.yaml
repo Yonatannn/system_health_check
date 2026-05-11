@@ -15,4 +15,4 @@ features:
 network:
   sync_interface:
     match_by:
-      adapter_name: "Ethernet"
+      adapter_name: "Ethernet 1"

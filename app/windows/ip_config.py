@@ -31,8 +31,8 @@ def snapshot_interface(iface_name: str) -> Optional[InterfaceSnapshot]:
     if not IS_WINDOWS:
         return InterfaceSnapshot(
             name=iface_name, index=0, dhcp_enabled=False,
-            ipv4_addresses=[IPv4Address("192.168.10.100", 24)],
-            gateway="192.168.10.1", dns_servers=["8.8.8.8"],
+            ipv4_addresses=[IPv4Address("192.168.1.100", 24)],
+            gateway="192.168.1.1", dns_servers=[],
         )
 
     ps = f"""

@@ -53,12 +53,12 @@ def _get_interfaces_mock() -> list[dict]:
     """Mock data for development/testing on non-Windows."""
     return [
         {
-            "name": "Ethernet",
+            "name": "Ethernet 1",
             "mac": "AA-BB-CC-DD-EE-01",
             "description": "Intel(R) Ethernet Connection",
             "status": "Up",
             "index": 1,
-            "ipv4": [{"address": "192.168.0.100", "prefix": 24}],
+            "ipv4": [{"address": "192.168.1.100", "prefix": 24}],
         },
         {
             "name": "Ethernet 2",
@@ -66,7 +66,7 @@ def _get_interfaces_mock() -> list[dict]:
             "description": "USB Ethernet Adapter",
             "status": "Up",
             "index": 2,
-            "ipv4": [{"address": "192.168.1.100", "prefix": 24}],
+            "ipv4": [{"address": "192.168.1.200", "prefix": 24}],
         },
     ]
 

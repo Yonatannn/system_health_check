@@ -21,6 +21,7 @@ class DHCPContext:
         self.dhcp_wait_timeout = dhcp_wait_timeout
         self.log = log_callback or (lambda msg: None)
         self._snapshot: Optional[InterfaceSnapshot] = None
+        self._switched: bool = False
 
     def prepare(self) -> InterfaceSnapshot:
         """Snapshot and switch to DHCP. Returns snapshot for reference."""
@@ -38,6 +39,7 @@ class DHCPContext:
         ok, msg = switch_to_dhcp(self.iface_name)
         if not ok:
             raise DHCPSwitchError(f"Failed to switch to DHCP: {msg}")
+        self._switched = True
 
         self.log("Waiting for DHCP address assignment…")
         ok, msg = wait_for_dhcp(self.iface_name, self.dhcp_wait_timeout)
@@ -50,7 +52,7 @@ class DHCPContext:
 
     def restore(self) -> tuple[bool, str]:
         """Restore interface to saved snapshot. Safe to call even if prepare() failed."""
-        if self._snapshot is None:
+        if self._snapshot is None or not self._switched:
             return True, "Nothing to restore"
         self.log("Restoring interface configuration…")
         ok, msg = restore_interface(self._snapshot)
