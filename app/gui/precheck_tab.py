@@ -17,7 +17,7 @@ from app.core.result import group_by_category, calculate_overall_status
 from app.checks.windows_interfaces import run_interface_checks
 from app.checks.mission_planner_files import run_mission_planner_checks
 from app.checks.external_files import run_external_file_checks
-from app.checks.network_components import run_component_ping_checks, make_skipped_ping_checks
+from app.checks.network_components import run_component_ping_checks
 from app.update.checksum_manifest import load_checksum_manifest
 from app.gui.widgets import status_badge, overall_status_label, section_header, horizontal_line
 
@@ -53,13 +53,15 @@ class PrecheckWorker(QThread):
             interface_results = run_interface_checks(self.profile)
             results.extend(interface_results)
 
-            interfaces_ok = not any(
-                r.status == CheckStatus.FAIL and r.blocking for r in interface_results
-            )
-            if interfaces_ok:
-                results.extend(run_component_ping_checks(self.profile))
-            else:
-                results.extend(make_skipped_ping_checks(self.profile))
+            failed_iface_ids: set[str] = {
+                spec.id
+                for spec in self.profile.windows_interfaces
+                if any(
+                    r.status == CheckStatus.FAIL and r.blocking and r.id.startswith(f"iface_{spec.id}_")
+                    for r in interface_results
+                )
+            }
+            results.extend(run_component_ping_checks(self.profile, failed_iface_ids))
 
             results.extend(run_mission_planner_checks(self.profile, sha256_manifest))
             results.extend(run_external_file_checks(self.profile, sha256_manifest))
