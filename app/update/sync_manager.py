@@ -5,6 +5,7 @@ from typing import Optional, Callable
 
 from app.core.config_loader import AppSettings
 from app.core.paths import AppPaths
+from app.core.profile_loader import load_all_profiles
 from app.windows.admin import is_admin
 from app.windows.powershell import ping_host
 from app.windows.adapters import find_adapter_by_match
@@ -36,10 +37,23 @@ class SyncManager:
         self.settings = settings
         self.log = log or (lambda msg: None)
 
+    def _collect_repos(self) -> list[dict]:
+        profiles = load_all_profiles(self.paths.profiles_dir)
+        seen: set[str] = set()
+        repos = []
+        for p in profiles:
+            if p.source_repo and p.source_repo.name not in seen:
+                seen.add(p.source_repo.name)
+                repos.append({
+                    "name": p.source_repo.name,
+                    "url": p.source_repo.url,
+                    "branch": p.source_repo.branch,
+                })
+        return repos
+
     def run_sync(self) -> SyncReport:
         report = SyncReport(success=False)
 
-        # Check admin if DHCP switching is required
         if self.settings.temporarily_switch_to_dhcp and not is_admin():
             report.error = (
                 "Administrator privileges are required to temporarily switch "
@@ -47,7 +61,6 @@ class SyncManager:
             )
             return report
 
-        # Find sync interface
         iface_match = self.settings.sync_interface_match
         if not iface_match:
             report.messages.append("No sync interface configured — skipping DHCP switch.")
@@ -97,24 +110,23 @@ class SyncManager:
         return True
 
     def _run_sync_operations(self, report: SyncReport) -> SyncReport:
+        repos = self._collect_repos()
         gitlab_commits: dict[str, Optional[str]] = {}
 
-        if self.settings.enable_gitlab_sync:
-            repos = self.settings.gitlab_repositories
-            if repos:
-                self.log("Starting GitLab sync…")
-                results = sync_all_repositories(
-                    repos=repos,
-                    sources_dir=self.paths.sources_dir,
-                    log=self.log,
-                )
-                report.git_results = results
-                for r in results:
-                    if r.success:
-                        report.messages.append(f"GitLab [{r.name}]: OK (commit: {r.commit or 'unknown'})")
-                        gitlab_commits[r.name] = r.commit
-                    else:
-                        report.messages.append(f"GitLab [{r.name}]: FAILED — {r.error}")
+        if self.settings.enable_gitlab_sync and repos:
+            self.log("Starting GitLab sync…")
+            results = sync_all_repositories(
+                repos=repos,
+                sources_dir=self.paths.sources_dir,
+                log=self.log,
+            )
+            report.git_results = results
+            for r in results:
+                if r.success:
+                    report.messages.append(f"GitLab [{r.name}]: OK (commit: {r.commit or 'unknown'})")
+                    gitlab_commits[r.name] = r.commit
+                else:
+                    report.messages.append(f"GitLab [{r.name}]: FAILED — {r.error}")
 
         any_git_success = any(r.success for r in report.git_results) if report.git_results else True
 
@@ -123,10 +135,10 @@ class SyncManager:
             try:
                 build_bundle(
                     sources_gitlab_dir=self.paths.gitlab_sources_dir,
+                    repos=repos,
                     existing_bundle_dir=self.paths.config_bundle_dir,
                     output_bundle_dir=self.paths.config_bundle_dir,
                     gitlab_commits=gitlab_commits,
-                    settings_sources=self.settings.raw().get("sources", {}),
                     log=self.log,
                 )
                 report.bundle_built = True

@@ -24,14 +24,14 @@ def _copy_tree(src: Path, dst: Path):
 
 def _compute_source_checksums(
     sources_gitlab_dir: Path,
-    settings_sources: dict,
+    repos: list[dict],
     log: Callable[[str], None],
 ) -> dict[str, str]:
     checksums: dict[str, str] = {}
 
-    for repo in settings_sources.get("gitlab", {}).get("repositories", []):
+    for repo in repos:
         name = repo.get("name", "")
-        local_path = Path(repo.get("local_path", str(sources_gitlab_dir / name)))
+        local_path = sources_gitlab_dir / name
         if not local_path.exists():
             continue
         log(f"Hashing files from GitLab source: {name}…")
@@ -48,10 +48,10 @@ def _compute_source_checksums(
 
 def build_bundle(
     sources_gitlab_dir: Path,
+    repos: list[dict],
     existing_bundle_dir: Path,
     output_bundle_dir: Path,
     gitlab_commits: dict[str, Optional[str]],
-    settings_sources: dict,
     log: Optional[Callable[[str], None]] = None,
 ) -> Path:
     """
@@ -66,10 +66,10 @@ def build_bundle(
         tmp_path.mkdir()
 
         log("Computing checksums from sources…")
-        checksums = _compute_source_checksums(sources_gitlab_dir, settings_sources, log)
+        checksums = _compute_source_checksums(sources_gitlab_dir, repos, log)
 
         log("Generating bundle manifest…")
-        _write_manifest(tmp_path, settings_sources, gitlab_commits)
+        _write_manifest(tmp_path, repos, gitlab_commits)
 
         log("Writing checksum manifest…")
         write_checksum_manifest(tmp_path, checksums)
@@ -93,16 +93,17 @@ def build_bundle(
         return output_bundle_dir
 
 
-def _write_manifest(bundle_dir: Path, settings_sources: dict, gitlab_commits: dict):
+def _write_manifest(bundle_dir: Path, repos: list[dict], gitlab_commits: dict):
     version = datetime.now().strftime("%Y.%m.%d-%H%M")
-    gitlab_sources = []
-    for repo in settings_sources.get("gitlab", {}).get("repositories", []):
-        gitlab_sources.append({
-            "name": repo.get("name"),
-            "url": repo.get("url"),
-            "branch": repo.get("branch", "main"),
-            "commit": gitlab_commits.get(repo.get("name"), "UNKNOWN"),
-        })
+    gitlab_sources = [
+        {
+            "name": r.get("name"),
+            "url": r.get("url"),
+            "branch": r.get("branch", "main"),
+            "commit": gitlab_commits.get(r.get("name"), "UNKNOWN"),
+        }
+        for r in repos
+    ]
 
     manifest = {
         "bundle": {

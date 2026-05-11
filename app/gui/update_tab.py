@@ -11,6 +11,7 @@ from PyQt5.QtGui import QFont
 from app.core.paths import AppPaths
 from app.core.config_loader import AppSettings
 from app.core.bundle import load_bundle_manifest, validate_bundle
+from app.core.profile_loader import load_all_profiles
 from app.update.sync_manager import SyncManager, SyncReport
 from app.windows.admin import is_admin, restart_as_admin
 from app.gui.widgets import section_header, horizontal_line
@@ -68,12 +69,9 @@ class UpdateTab(QWidget):
         iface_row.addStretch()
         info_layout.addLayout(iface_row)
 
-        # GitLab repos list
-        repos = self.settings.gitlab_repositories
-        if repos:
-            info_layout.addWidget(QLabel("GitLab Repositories:"))
-            for r in repos:
-                info_layout.addWidget(QLabel(f"  • {r.get('name', '')} — {r.get('url', '')}"))
+        # GitLab repos from profiles
+        self._repos_layout = info_layout
+        self._populate_repos()
 
         main.addWidget(info_group)
 
@@ -185,6 +183,14 @@ class UpdateTab(QWidget):
             QMessageBox.information(self, "Bundle Validation", "Current bundle is valid.")
         else:
             QMessageBox.warning(self, "Bundle Validation", f"Bundle validation failed:\n{err}")
+
+    def _populate_repos(self):
+        profiles = load_all_profiles(self.paths.profiles_dir)
+        repos = [p.source_repo for p in profiles if p.source_repo]
+        if repos:
+            self._repos_layout.addWidget(QLabel("GitLab Repositories:"))
+            for r in repos:
+                self._repos_layout.addWidget(QLabel(f"  • {r.name} — {r.url}"))
 
     def refresh(self):
         self._server_label.setText(self.settings.server_ip)

@@ -3,6 +3,11 @@ profile:
   display_name: "Copter"
   description: "Multicopter — ground station pre-flight configuration check."
 
+source_repo:
+  name: "copter-configs"
+  url: "http://192.168.1.1/group/copter-configs.git"
+  branch: "main"
+
 windows_interfaces:
   - id: "autopilot_link"
     display_name: "Autopilot Link (Ethernet)"
