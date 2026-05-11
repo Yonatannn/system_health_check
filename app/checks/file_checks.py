@@ -39,7 +39,7 @@ def check_file_spec(
                 title=f"{spec.display_name} — Not in Bundle",
                 details=(
                     f"No approved baseline found for '{spec.display_name}' in the configuration bundle. "
-                    "Connect to the configuration server and use the Update Bundle tab to download the latest bundle."
+                    "Connect to the configuration server and run a bundle sync to download the latest version."
                 ),
             ))
         else:
@@ -57,11 +57,7 @@ def check_file_spec(
             title=f"{spec.display_name} — File Missing",
             expected=str(target),
             actual="file not found",
-            details=(
-                f"Expected file not found at: {target}\n"
-                "Click 'Apply Profile' to copy the correct file from the bundle. "
-                "If Apply Profile is unavailable, run an Update Bundle sync first."
-            ),
+            details=f"The file does not exist at the expected path: {target}",
             blocking=spec.required,
         ))
         return results
@@ -86,8 +82,7 @@ def check_file_spec(
                 title=f"{spec.display_name} — XML Corrupted",
                 details=(
                     f"The file at {target} is not valid XML and cannot be read by Mission Planner. "
-                    f"Parse error: {err}\n"
-                    "Click 'Apply Profile' to restore the correct version from the bundle."
+                    f"Parse error: {err}"
                 ),
                 blocking=spec.required,
             ))
@@ -108,8 +103,7 @@ def check_file_spec(
                 details=(
                     f"The file at {target} does not match the approved version — "
                     "it may have been changed manually or belong to a different profile. "
-                    "Click 'Apply Profile' to overwrite it with the correct version. "
-                    "A timestamped backup will be created automatically before overwriting."
+                    "The file must be replaced with the correct version."
                 ),
                 blocking=spec.required,
             ))
