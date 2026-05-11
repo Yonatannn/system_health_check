@@ -3,7 +3,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, Callable
 
+import os
 import shutil
+import stat
 
 from app.core.config_loader import AppSettings
 from app.core.paths import AppPaths
@@ -14,6 +16,15 @@ from app.windows.adapters import find_adapter_by_match
 from app.windows.dhcp_context import DHCPContext, DHCPSwitchError
 from app.update.gitlab_sync import sync_all_repositories, GitSyncResult
 from app.update.bundle_builder import build_bundle, BundleBuildError
+
+
+def _rmtree_force(func, path, _exc_info):
+    """onerror handler: strip read-only flag (common in .git dirs on Windows) and retry."""
+    try:
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
+    except Exception:
+        pass
 
 
 @dataclass
@@ -161,6 +172,11 @@ class SyncManager:
     def _cleanup_cloned_repos(self, repos: list[dict]):
         for repo in repos:
             local_path = self.paths.gitlab_sources_dir / repo["name"]
-            if local_path.exists():
-                shutil.rmtree(local_path)
+            self.log(f"Cleanup: {local_path.resolve()} (exists={local_path.exists()})")
+            if not local_path.exists():
+                continue
+            try:
+                shutil.rmtree(local_path, onerror=_rmtree_force)
                 self.log(f"Cleaned up cloned repo: {repo['name']}")
+            except Exception as e:
+                self.log(f"Warning: could not delete {local_path}: {e}")
