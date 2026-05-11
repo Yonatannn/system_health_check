@@ -29,20 +29,41 @@ def _compute_source_checksums(
 ) -> dict[str, str]:
     checksums: dict[str, str] = {}
 
+    log(f"Source root: {sources_gitlab_dir.resolve()}")
+
+    if not sources_gitlab_dir.exists():
+        log(f"  ERROR: source root does not exist — no repos have been cloned yet")
+        return checksums
+
     for repo in repos:
         name = repo.get("name", "")
         local_path = sources_gitlab_dir / name
+        log(f"Scanning repo '{name}' at {local_path.resolve()}")
+
         if not local_path.exists():
+            log(f"  MISSING: repo directory not found — sync may have failed")
             continue
-        log(f"Hashing files from GitLab source: {name}…")
+
+        found_any_subdir = False
         for sub in TRACKED_SUBDIRS:
             src_sub = local_path / sub
-            if src_sub.exists():
-                for file_path in sorted(src_sub.rglob("*")):
-                    if file_path.is_file():
-                        rel = file_path.relative_to(local_path).as_posix()
-                        checksums[rel] = sha256_file(file_path)
+            if not src_sub.exists():
+                log(f"  Subdir '{sub}/' not found in repo (skipping)")
+                continue
 
+            found_any_subdir = True
+            files = sorted(f for f in src_sub.rglob("*") if f.is_file())
+            log(f"  Subdir '{sub}/' — {len(files)} file(s) found")
+            for file_path in files:
+                rel = file_path.relative_to(local_path).as_posix()
+                checksums[rel] = sha256_file(file_path)
+                log(f"    hashed: {rel}")
+
+        if not found_any_subdir:
+            log(f"  WARNING: neither 'mission_planner/' nor 'external_configs/' found "
+                f"in repo root — check that the repo has the expected directory structure")
+
+    log(f"Total checksums computed: {len(checksums)}")
     return checksums
 
 
@@ -54,32 +75,31 @@ def build_bundle(
     gitlab_commits: dict[str, Optional[str]],
     log: Optional[Callable[[str], None]] = None,
 ) -> Path:
-    """
-    Build a config bundle from synced GitLab sources.
-    Stores only SHA256 checksums of reference files.
-    Works atomically: writes to a temp dir, validates, then replaces output_bundle_dir.
-    """
     log = log or (lambda msg: None)
 
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp) / "bundle"
         tmp_path.mkdir()
 
-        log("Computing checksums from sources…")
+        log("--- Computing checksums ---")
         checksums = _compute_source_checksums(sources_gitlab_dir, repos, log)
 
-        log("Generating bundle manifest…")
+        if not checksums:
+            log("WARNING: no files were hashed — bundle will have empty checksum manifest")
+
+        log("--- Writing bundle manifest ---")
         _write_manifest(tmp_path, repos, gitlab_commits)
 
-        log("Writing checksum manifest…")
+        log("--- Writing checksum manifest ---")
         write_checksum_manifest(tmp_path, checksums)
 
-        log("Validating bundle…")
+        log("--- Validating bundle ---")
         ok, err = validate_bundle(tmp_path)
         if not ok:
             raise BundleBuildError(f"Bundle validation failed: {err}")
 
-        log("Replacing active bundle…")
+        log("--- Replacing active bundle ---")
+        log(f"Output bundle dir: {output_bundle_dir.resolve()}")
         old_bundle = output_bundle_dir.parent / (output_bundle_dir.name + ".old")
         if old_bundle.exists():
             shutil.rmtree(str(old_bundle))

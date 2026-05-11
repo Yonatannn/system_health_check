@@ -111,6 +111,9 @@ class SyncManager:
 
     def _run_sync_operations(self, report: SyncReport) -> SyncReport:
         repos = self._collect_repos()
+        self.log(f"Profiles dir: {self.paths.profiles_dir.resolve()}")
+        self.log(f"Repos to sync: {[r['name'] for r in repos] or '(none found in profiles)'}")
+        self.log(f"GitLab sources dir: {self.paths.gitlab_sources_dir.resolve()}")
         gitlab_commits: dict[str, Optional[str]] = {}
 
         if self.settings.enable_gitlab_sync and repos:
