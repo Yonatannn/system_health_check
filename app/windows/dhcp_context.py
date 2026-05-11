@@ -30,6 +30,10 @@ class DHCPContext:
             raise DHCPSwitchError(f"Could not read configuration of interface '{self.iface_name}'")
         self._snapshot = snapshot
 
+        if snapshot.dhcp_enabled:
+            self.log("Interface is already on DHCP — no switch needed, proceeding with sync.")
+            return snapshot
+
         self.log("Switching interface to DHCP…")
         ok, msg = switch_to_dhcp(self.iface_name)
         if not ok:
