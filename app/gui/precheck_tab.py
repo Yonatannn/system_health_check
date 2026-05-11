@@ -33,7 +33,21 @@ class PrecheckWorker(QThread):
 
     def run(self):
         try:
-            sha256_manifest = load_checksum_manifest(self.bundle_dir)
+            full_manifest = load_checksum_manifest(self.bundle_dir)
+
+            # The manifest stores keys as "{repo_name}/{rel_path}" to avoid
+            # collisions when copter and plane share identical submodule paths.
+            # Strip the repo prefix so file_checks can match against expected_file.
+            repo_prefix = (
+                f"{self.profile.source_repo.name}/"
+                if self.profile.source_repo else ""
+            )
+            sha256_manifest = {
+                key[len(repo_prefix):]: val
+                for key, val in full_manifest.items()
+                if not repo_prefix or key.startswith(repo_prefix)
+            }
+
             results = []
 
             interface_results = run_interface_checks(self.profile)

@@ -48,11 +48,12 @@ def _compute_source_checksums(
 
         for rel in expected_files:
             full_path = repo_dir / rel
+            key = f"{profile.source_repo.name}/{rel}"
             if full_path.exists():
-                checksums[rel] = sha256_file(full_path)
-                log(f"  OK   {rel}")
+                checksums[key] = sha256_file(full_path)
+                log(f"  OK   {key}")
             else:
-                log(f"  MISS {rel}  (not found at {full_path})")
+                log(f"  MISS {key}  (not found at {full_path})")
 
     log(f"Total checksums computed: {len(checksums)}")
     return checksums
