@@ -27,7 +27,7 @@ class SyncWorker(QThread):
         self.settings = settings
 
     def run(self):
-        manager = SyncManager(self.paths, self.settings, log_callback=self.log_message.emit)
+        manager = SyncManager(self.paths, self.settings, log=self.log_message.emit)
         report = manager.run_sync()
         self.finished.emit(report)
 
