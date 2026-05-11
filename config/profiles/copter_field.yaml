@@ -15,7 +15,7 @@ windows_interfaces:
     match_by:
       adapter_name: "Ethernet"
     expected_ipv4:
-      address: "192.168.10.100"
+      address: "192.168.1.100"
       prefix_length: 24
 
   - id: "gimbal_link"
@@ -24,29 +24,29 @@ windows_interfaces:
     match_by:
       adapter_name: "Ethernet 2"
     expected_ipv4:
-      address: "192.168.20.100"
+      address: "192.168.1.200"
       prefix_length: 24
 
 network_components:
   ping_timeout_seconds: 5
   components:
     - name: "Autopilot"
-      ip: "192.168.10.1"
+      ip: "192.168.1.1"
       interface: "autopilot_link"
       required: true
 
     - name: "GCS Video Receiver"
-      ip: "192.168.10.50"
+      ip: "192.168.1.50"
       interface: "autopilot_link"
       required: false
 
     - name: "Payload Computer"
-      ip: "192.168.20.1"
+      ip: "192.168.1.201"
       interface: "gimbal_link"
       required: true
 
     - name: "Camera Control Unit"
-      ip: "192.168.20.10"
+      ip: "192.168.1.210"
       interface: "gimbal_link"
       required: false
 
