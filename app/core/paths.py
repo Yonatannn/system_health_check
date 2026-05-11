@@ -21,6 +21,10 @@ class AppPaths:
         return self.root / "config"
 
     @property
+    def profiles_dir(self) -> Path:
+        return self.config_dir / "profiles"
+
+    @property
     def data_dir(self) -> Path:
         return self.root / "data"
 
@@ -46,6 +50,6 @@ class AppPaths:
         return Path(expanded)
 
     def ensure_dirs(self):
-        for d in [self.config_dir, self.data_dir, self.config_bundle_dir,
-                  self.sources_dir, self.gitlab_sources_dir]:
+        for d in [self.config_dir, self.profiles_dir, self.data_dir,
+                  self.config_bundle_dir, self.sources_dir, self.gitlab_sources_dir]:
             d.mkdir(parents=True, exist_ok=True)

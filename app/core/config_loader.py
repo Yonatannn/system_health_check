@@ -1,6 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 import yaml
 
 
@@ -29,22 +29,6 @@ class AppSettings:
     @property
     def server_ip(self) -> str:
         return self.get("sync", "server_ip", default="192.168.1.1")
-
-    @property
-    def data_dir(self) -> Optional[str]:
-        return self.get("paths", "data_dir")
-
-    @property
-    def config_bundle_dir(self) -> Optional[str]:
-        return self.get("paths", "config_bundle_dir")
-
-    @property
-    def mission_planner_dir(self) -> Optional[str]:
-        return self.get("paths", "mission_planner_dir")
-
-    @property
-    def git_executable(self) -> str:
-        return self.get("tools", "git_executable", default="git")
 
     @property
     def enable_gitlab_sync(self) -> bool:

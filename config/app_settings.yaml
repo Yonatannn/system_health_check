@@ -2,29 +2,18 @@ app:
   name: "Ground Station Precheck Manager"
   version: "1.0.0"
 
-paths:
-  data_dir: "./data"
-  config_bundle_dir: "./data/config_bundle"
-  sources_dir: "./data/sources"
-  mission_planner_dir: "%USERPROFILE%/Documents/Mission Planner"
-
-features:
-  enable_gitlab_sync: true
-
 sync:
   server_ip: "192.168.1.1"
-  require_server_reachable_before_sync: true
   temporarily_switch_interface_to_dhcp: true
   restore_interface_after_sync: true
   server_reachability_timeout_seconds: 10
   dhcp_wait_timeout_seconds: 30
 
-tools:
-  git_executable: "git"
+features:
+  enable_gitlab_sync: true
 
 sources:
   gitlab:
-    enabled: true
     repositories:
       - name: "copter-configs"
         url: "http://192.168.1.1/group/copter-configs.git"
@@ -40,29 +29,3 @@ network:
   sync_interface:
     match_by:
       adapter_name: "Ethernet"
-
-network_components:
-  ping_timeout_seconds: 5
-  subnet_source_ips:
-    0: "192.168.0.100"   # Main PC Interface (Ethernet)
-    1: "192.168.1.100"   # USB Network Adapter (Ethernet 2)
-  components:
-    - name: "Autopilot"
-      ip: "192.168.0.1"
-      subnet: 0
-      required: true
-
-    - name: "GCS Video Receiver"
-      ip: "192.168.0.50"
-      subnet: 0
-      required: false
-
-    - name: "Payload Computer"
-      ip: "192.168.1.1"
-      subnet: 1
-      required: true
-
-    - name: "Camera Control Unit"
-      ip: "192.168.1.10"
-      subnet: 1
-      required: false

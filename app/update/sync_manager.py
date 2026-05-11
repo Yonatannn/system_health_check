@@ -99,7 +99,6 @@ class SyncManager:
     def _run_sync_operations(self, report: SyncReport) -> SyncReport:
         gitlab_commits: dict[str, Optional[str]] = {}
 
-        # GitLab sync
         if self.settings.enable_gitlab_sync:
             repos = self.settings.gitlab_repositories
             if repos:
@@ -107,7 +106,6 @@ class SyncManager:
                 results = sync_all_repositories(
                     repos=repos,
                     sources_dir=self.paths.sources_dir,
-                    git_exe=self.settings.git_executable,
                     log=self.log,
                 )
                 report.git_results = results
@@ -118,7 +116,6 @@ class SyncManager:
                     else:
                         report.messages.append(f"GitLab [{r.name}]: FAILED — {r.error}")
 
-        # Build bundle
         any_git_success = any(r.success for r in report.git_results) if report.git_results else True
 
         if any_git_success:

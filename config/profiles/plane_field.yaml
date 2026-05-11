@@ -22,6 +22,29 @@ windows_interfaces:
       address: "192.168.2.100"
       prefix_length: 24
 
+network_components:
+  ping_timeout_seconds: 5
+  components:
+    - name: "Autopilot"
+      ip: "192.168.0.1"
+      interface: "autopilot_link"
+      required: true
+
+    - name: "GCS Video Receiver"
+      ip: "192.168.0.50"
+      interface: "autopilot_link"
+      required: false
+
+    - name: "Payload Computer"
+      ip: "192.168.2.1"
+      interface: "payload_link"
+      required: true
+
+    - name: "Camera Control Unit"
+      ip: "192.168.2.10"
+      interface: "payload_link"
+      required: false
+
 mission_planner:
   base_path: "%USERPROFILE%/Documents/Mission Planner"
   files:

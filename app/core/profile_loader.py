@@ -5,7 +5,7 @@ import yaml
 
 from app.core.models import (
     Profile, InterfaceSpec, InterfaceMatchRule, ExpectedIPv4,
-    MissionPlannerSpec, FileCheckSpec
+    MissionPlannerSpec, FileCheckSpec, NetworkComponentSpec, NetworkComponentsConfig
 )
 
 
@@ -56,12 +56,29 @@ def _load_mission_planner(d: dict) -> MissionPlannerSpec:
     )
 
 
+def _load_network_components(d: dict) -> NetworkComponentsConfig:
+    components = [
+        NetworkComponentSpec(
+            name=c.get("name", "Unknown"),
+            ip=c.get("ip", ""),
+            interface_id=c.get("interface", ""),
+            required=bool(c.get("required", True)),
+        )
+        for c in d.get("components", [])
+    ]
+    return NetworkComponentsConfig(
+        ping_timeout_seconds=int(d.get("ping_timeout_seconds", 5)),
+        components=components,
+    )
+
+
 def load_profile(profile_path: Path) -> Profile:
     with open(profile_path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
 
     prof_meta = data.get("profile", {})
     interfaces_raw = data.get("windows_interfaces", [])
+    nc_raw = data.get("network_components")
     mp_raw = data.get("mission_planner")
     ext_raw = data.get("external_files", [])
 
@@ -70,6 +87,7 @@ def load_profile(profile_path: Path) -> Profile:
         display_name=prof_meta.get("display_name", profile_path.stem),
         description=prof_meta.get("description", ""),
         windows_interfaces=[_load_interface(i) for i in interfaces_raw],
+        network_components=_load_network_components(nc_raw) if nc_raw else None,
         mission_planner=_load_mission_planner(mp_raw) if mp_raw else None,
         external_files=[_load_file_spec(f) for f in ext_raw],
     )

@@ -27,15 +27,13 @@ class DiagnosticsWorker(QThread):
     def run(self):
         adapters = list_adapters()
         admin = is_admin()
-        git_exe = self.settings.git_executable
-        git_found = shutil.which(git_exe) is not None
+        git_found = shutil.which("git") is not None
         server_reachable = ping_host(self.settings.server_ip,
                                       timeout_seconds=self.settings.server_reachability_timeout)
         self.finished.emit({
             "adapters": adapters,
             "admin": admin,
             "git_found": git_found,
-            "git_exe": git_exe,
             "server_reachable": server_reachable,
             "server_ip": self.settings.server_ip,
         })
@@ -65,7 +63,7 @@ class DiagnosticsTab(QWidget):
         sys_group = QGroupBox("System Checks")
         sys_layout = QVBoxLayout(sys_group)
         self._admin_label = QLabel("Administrator: —")
-        self._git_label = QLabel("Git executable: —")
+        self._git_label = QLabel("Git: —")
         self._server_label = QLabel("Server reachable: —")
         sys_layout.addWidget(self._admin_label)
         sys_layout.addWidget(self._git_label)
@@ -108,7 +106,7 @@ class DiagnosticsTab(QWidget):
 
         git_found = info["git_found"]
         self._git_label.setText(
-            f"Git executable ({info['git_exe']}): {'Found ✓' if git_found else 'Not found ✗'}"
+            f"Git: {'Found ✓' if git_found else 'Not found ✗'}"
         )
         self._git_label.setStyleSheet(
             "color: #2e7d32;" if git_found else "color: #c62828;"
@@ -134,13 +132,11 @@ class DiagnosticsTab(QWidget):
         self._load_manifest()
 
     def _load_manifest(self):
-        from app.core.bundle import load_bundle_manifest
         manifest = load_bundle_manifest(self.paths.config_bundle_dir)
         if manifest:
             text = (f"Name: {manifest.name}\n"
                     f"Version: {manifest.version}\n"
                     f"Created: {manifest.created_at}\n"
-                    f"Profiles: {', '.join(manifest.profile_ids)}\n"
                     f"Valid: {manifest.is_valid}")
             if manifest.gitlab_sources:
                 text += "\n\nGitLab Sources:"
