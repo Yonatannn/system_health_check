@@ -148,11 +148,13 @@ class SyncManager:
                 )
                 report.bundle_built = True
                 report.success = True
-                self._cleanup_cloned_repos(repos)
             except BundleBuildError as e:
                 report.error = f"Bundle build failed: {e}"
+            finally:
+                self._cleanup_cloned_repos(repos)
         else:
             report.error = "All sync sources failed; bundle not updated."
+            self._cleanup_cloned_repos(repos)
 
         return report
 
